@@ -22,3 +22,9 @@ def test_service_container_uses_same_settings(client: TestClient) -> None:
     container_settings = client.app.state.container.settings
     app_settings = client.app.state.settings
     assert container_settings is app_settings
+
+
+def test_service_container_includes_brain(client: TestClient) -> None:
+    """Service container includes Brain subsystem after Sprint 2."""
+    assert client.app.state.container.brain is not None
+    assert client.app.state.container.brain.orchestrator is not None
