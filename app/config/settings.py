@@ -5,10 +5,10 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
-from typing import Self
+from typing import Annotated, Self
 
 from pydantic import Field, SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         default=SecretStr("change-me-in-production"),
         alias="API_SECRET_KEY",
     )
-    cors_origins: list[str] = Field(
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],
         alias="CORS_ORIGINS",
     )
@@ -107,6 +107,14 @@ class Settings(BaseSettings):
     openrouter_api_base: str = Field(
         default="https://openrouter.ai/api/v1",
         alias="OPENROUTER_API_BASE",
+    )
+    jarvis_system_prompt: str = Field(
+        default=(
+            "You are Jarvis, a personal AI assistant for the user's computer. "
+            "Be helpful, concise, and proactive. You remember the current "
+            "conversation. When you cannot do something yet, say so clearly."
+        ),
+        alias="JARVIS_SYSTEM_PROMPT",
     )
     anthropic_api_key: SecretStr | None = Field(
         default=None,

@@ -9,6 +9,7 @@ from fastapi import Depends, Request
 from app.config.settings import Settings
 from app.dependencies.container import ServiceContainer
 from app.services.chat import ChatService
+from app.services.conversation import ConversationService
 from app.services.health import HealthService
 
 
@@ -69,7 +70,25 @@ def get_chat_service(
     return container.chat_service
 
 
+def get_conversation_service(
+    container: Annotated[ServiceContainer, Depends(get_service_container)],
+) -> ConversationService:
+    """Provide the conversation service from the container.
+
+    Args:
+        container: Application service container.
+
+    Returns:
+        Conversation service instance.
+    """
+    return container.conversation_service
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+ConversationServiceDep = Annotated[
+    ConversationService,
+    Depends(get_conversation_service),
+]
 ContainerDep = Annotated[ServiceContainer, Depends(get_service_container)]

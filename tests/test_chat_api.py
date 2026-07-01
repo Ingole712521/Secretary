@@ -87,6 +87,7 @@ def test_chat_endpoint_returns_assistant_message(chat_client: TestClient) -> Non
     assert response.status_code == 200
     payload = response.json()
     assert payload["message"] == "Jarvis online."
+    assert payload["conversation_id"]
     assert payload["provider"] == "openrouter"
     assert payload["model"] == "anthropic/claude-3.5-sonnet"
     assert payload["finish_reason"] == "stop"

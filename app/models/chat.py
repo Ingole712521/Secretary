@@ -22,6 +22,13 @@ class ChatRequest(BaseModel):
         max_length=32_000,
         description="User message to send to the model",
     )
+    conversation_id: str | None = Field(
+        default=None,
+        description=(
+            "Existing conversation ID to continue. "
+            "Omit to start a new conversation."
+        ),
+    )
     system_prompt: str | None = Field(
         default=None,
         max_length=16_000,
@@ -58,6 +65,10 @@ class ChatResponse(BaseModel):
     """
 
     message: str = Field(..., description="Assistant response text")
+    conversation_id: str = Field(
+        ...,
+        description="Conversation session identifier for follow-up messages",
+    )
     model: str = Field(..., description="Model that generated the response")
     provider: str = Field(..., description="LLM provider identifier")
     finish_reason: str | None = Field(

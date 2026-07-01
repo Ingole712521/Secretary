@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from app.brain.exceptions import LLMCompletionError, LLMProviderError
+from app.brain.exceptions import (
+    ConversationNotFoundError,
+    LLMCompletionError,
+    LLMProviderError,
+)
 from app.exceptions import (
     AuthenticationException,
     ConfigurationException,
@@ -17,6 +21,7 @@ _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ToolValidationError, 422),
     (ToolPermissionDeniedError, 403),
     (AuthenticationException, 401),
+    (ConversationNotFoundError, 404),
     (LLMCompletionError, 502),
     (LLMProviderError, 502),
     (ConfigurationException, 500),
