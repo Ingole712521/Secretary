@@ -37,3 +37,9 @@ def test_service_container_includes_tool_platform(client: TestClient) -> None:
     assert tools.registry is not None
     assert tools.executor is not None
     assert tools.registry.count() == 0
+
+
+def test_service_container_includes_chat_service(client: TestClient) -> None:
+    """Service container includes ChatService for AI interactions."""
+    chat_service = client.app.state.container.chat_service
+    assert chat_service is not None

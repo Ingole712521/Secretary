@@ -7,5 +7,7 @@ LOGGER_REQUEST = "jarvis.request"
 LOGGER_ERRORS = "jarvis.errors"
 LOGGER_STARTUP = "jarvis.startup"
 LOGGER_MAIN = "jarvis.main"
+LOGGER_LLM = "jarvis.llm"
+LOGGER_CHAT = "jarvis.chat"
 
 DEFAULT_API_PREFIX = "/v1"

@@ -37,4 +37,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
+    container = app.state.container
+    if container.brain.openrouter_provider is not None:
+        await container.brain.openrouter_provider.close()
+
     logger.info("Jarvis OS shutting down")

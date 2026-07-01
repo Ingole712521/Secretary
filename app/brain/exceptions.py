@@ -72,3 +72,29 @@ class PromptNotFoundError(BrainError):
             code="PROMPT_NOT_FOUND",
         )
         self.prompt_name = name
+
+
+class LLMProviderError(BrainError):
+    """Raised when an LLM provider request fails at the transport layer."""
+
+    def __init__(self, message: str) -> None:
+        """Initialize an LLM provider transport error.
+
+        Args:
+            message: Description of the failure.
+        """
+        super().__init__(message, code="LLM_PROVIDER_ERROR")
+
+
+class LLMCompletionError(BrainError):
+    """Raised when an LLM provider returns an error completion response."""
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        """Initialize an LLM completion error.
+
+        Args:
+            message: Description of the failure.
+            status_code: Optional upstream HTTP status code.
+        """
+        super().__init__(message, code="LLM_COMPLETION_ERROR")
+        self.status_code = status_code

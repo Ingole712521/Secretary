@@ -11,6 +11,8 @@ from app.brain.model_router import ModelRouter
 from app.brain.orchestrator import Orchestrator
 from app.brain.planner import BrainPlanner
 from app.brain.prompt_manager import PromptManager
+from app.brain.providers.factory import register_llm_providers
+from app.brain.providers.openrouter import OpenRouterProvider
 from app.brain.schemas.llm import LLMProviderName
 from app.brain.stores.context_provider import StubContextProvider
 from app.brain.stores.conversation_store import InMemoryConversationStore
@@ -31,6 +33,7 @@ class BrainContainer:
         prompt_manager: Prompt template manager.
         model_router: Model selection registry.
         planner: Plan generation component.
+        openrouter_provider: Registered OpenRouter adapter, if active.
     """
 
     orchestrator: Orchestrator
@@ -39,6 +42,7 @@ class BrainContainer:
     prompt_manager: PromptManager
     model_router: ModelRouter
     planner: BrainPlanner
+    openrouter_provider: OpenRouterProvider | None = None
 
 
 def build_brain(settings: Settings) -> BrainContainer:
@@ -63,6 +67,7 @@ def build_brain(settings: Settings) -> BrainContainer:
     model_router = ModelRouter(
         default_provider=LLMProviderName(settings.llm_provider.value),
     )
+    openrouter_provider = register_llm_providers(settings, model_router)
     planner = BrainPlanner()
 
     orchestrator = Orchestrator(
@@ -80,4 +85,5 @@ def build_brain(settings: Settings) -> BrainContainer:
         prompt_manager=prompt_manager,
         model_router=model_router,
         planner=planner,
+        openrouter_provider=openrouter_provider,
     )

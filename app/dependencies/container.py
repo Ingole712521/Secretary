@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from app.brain.factory import BrainContainer, build_brain
+from app.services.chat import ChatService
 from app.services.health import HealthService
 from app.tools.factory import ToolPlatformContainer, build_tool_platform
 
@@ -20,12 +21,14 @@ class ServiceContainer:
     Attributes:
         settings: Application configuration.
         health_service: Health and status reporting service.
+        chat_service: Chat completion service.
         brain: AI Core subsystem container (Sprint 2+).
         tools: Tool platform container (Sprint 3+).
     """
 
     settings: Settings
     health_service: HealthService
+    chat_service: ChatService
     brain: BrainContainer
     tools: ToolPlatformContainer
 
@@ -39,9 +42,11 @@ def build_container(settings: Settings) -> ServiceContainer:
     Returns:
         Populated service container.
     """
+    brain = build_brain(settings)
     return ServiceContainer(
         settings=settings,
         health_service=HealthService(settings),
-        brain=build_brain(settings),
+        chat_service=ChatService(settings, brain.model_router),
+        brain=brain,
         tools=build_tool_platform(),
     )

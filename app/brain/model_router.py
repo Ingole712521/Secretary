@@ -179,10 +179,17 @@ class ModelRouter:
 
         if model_id is not None:
             matched = [m for m in candidates if m.model_id == model_id]
-            if not matched:
-                msg = f"Model '{model_id}' not found for provider '{chosen_provider}'"
-                raise ModelRoutingError(msg)
-            return matched[0]
+            if matched:
+                return matched[0]
+            if chosen_provider == LLMProviderName.OPENROUTER:
+                return ModelInfo(
+                    provider=chosen_provider,
+                    model_id=model_id,
+                    display_name=model_id,
+                    capabilities=[ModelCapability.CHAT],
+                )
+            msg = f"Model '{model_id}' not found for provider '{chosen_provider}'"
+            raise ModelRoutingError(msg)
 
         if not candidates:
             msg = "No model satisfies the required capabilities"
@@ -205,7 +212,7 @@ class ModelRouter:
         if adapter is None:
             msg = (
                 f"Provider '{provider}' is not registered. "
-                "Sprint 2 defines interfaces only — implement adapters later."
+                "Register a concrete adapter before calling the provider."
             )
             raise ModelRoutingError(msg)
         return adapter
