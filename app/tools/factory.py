@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
+from app.tools.bootstrap import register_production_tools
 from app.tools.executor.executor import ToolExecutor
 from app.tools.permissions.checker import PermissionChecker
 from app.tools.registry.registry import ToolRegistry
@@ -13,6 +15,9 @@ from app.tools.validators.parameter_validator import ParameterValidator
 from app.tools.validators.permission_validator import PermissionValidator
 from app.tools.validators.security_validator import SecurityPolicyValidator
 from app.tools.validators.tool_validator import ToolValidator
+
+if TYPE_CHECKING:
+    from app.config.settings import Settings
 
 
 @dataclass
@@ -34,11 +39,13 @@ class ToolPlatformContainer:
 
 def build_tool_platform(
     policy: ToolSecurityPolicy | None = None,
+    settings: Settings | None = None,
 ) -> ToolPlatformContainer:
     """Construct the tool platform with default Sprint 3 components.
 
     Args:
         policy: Optional security policy override.
+        settings: Optional settings for registering production tools.
 
     Returns:
         Wired ``ToolPlatformContainer``.
@@ -57,6 +64,9 @@ def build_tool_platform(
         security_validator,
     )
     executor = ToolExecutor(registry, validator, sandbox=sandbox)
+
+    if settings is not None:
+        register_production_tools(registry, settings)
 
     return ToolPlatformContainer(
         registry=registry,

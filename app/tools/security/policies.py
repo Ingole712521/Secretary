@@ -28,10 +28,19 @@ class ToolSecurityPolicy(BaseModel):
     dangerous_patterns: list[str] = Field(
         default_factory=lambda: [
             r"rm\s+-rf",
-            r"sudo\s+",
             r"format\s+c:",
             r"DROP\s+TABLE",
-            r";\s*--",
+        ],
+    )
+    confirmation_patterns: list[str] = Field(
+        default_factory=lambda: [
+            r"sudo\s+",
+            r"remove-item\s+.*-recurse",
+            r"\brm\s+",
+            r"del\s+/[fq]",
+            r"shutdown",
+            r"restart-computer",
+            r"stop-process\s+.*-force",
         ],
     )
     require_sandbox: bool = False
@@ -86,6 +95,10 @@ class SecurityValidator:
         self._compiled_patterns = [
             re.compile(pattern, re.IGNORECASE) for pattern in policy.dangerous_patterns
         ]
+        self._confirmation_patterns = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in policy.confirmation_patterns
+        ]
 
     @property
     def policy(self) -> ToolSecurityPolicy:
@@ -134,6 +147,33 @@ class SecurityValidator:
                     msg = f"Dangerous pattern detected in tool '{tool_id}' parameters"
                     raise ToolSecurityError(msg, tool_id=tool_id)
         return False
+
+    def check_confirmation_required(
+        self,
+        tool_id: str,
+        parameters: dict[str, object],
+        *,
+        confirmed: bool = False,
+    ) -> None:
+        """Require confirmation when parameters match confirmation patterns.
+
+        Args:
+            tool_id: Tool identifier.
+            parameters: Tool input parameters.
+            confirmed: Whether the user already confirmed execution.
+
+        Raises:
+            ToolConfirmationRequiredError: When confirmation is required.
+        """
+        if confirmed:
+            return
+
+        for value in parameters.values():
+            if not isinstance(value, str):
+                continue
+            for pattern in self._confirmation_patterns:
+                if pattern.search(value):
+                    raise ToolConfirmationRequiredError(tool_id)
 
     def requires_confirmation(
         self,

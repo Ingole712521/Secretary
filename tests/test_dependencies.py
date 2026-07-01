@@ -36,7 +36,8 @@ def test_service_container_includes_tool_platform(client: TestClient) -> None:
     assert tools is not None
     assert tools.registry is not None
     assert tools.executor is not None
-    assert tools.registry.count() == 0
+    assert tools.registry.count() == 1
+    assert tools.registry.find("terminal.run") is not None
 
 
 def test_service_container_includes_chat_service(client: TestClient) -> None:

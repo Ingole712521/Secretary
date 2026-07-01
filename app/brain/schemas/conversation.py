@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from app.brain.schemas.tools import LLMToolCall
 from app.utils.date import utc_now
 
 
@@ -30,13 +31,17 @@ class Message(BaseModel):
         role: Speaker role.
         content: Message text content.
         created_at: UTC timestamp when the message was created.
+        tool_calls: Tool invocations requested by the assistant.
+        tool_call_id: Provider tool call ID for tool-role messages.
         metadata: Optional key-value metadata.
     """
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     role: MessageRole
-    content: str
+    content: str = ""
     created_at: datetime = Field(default_factory=utc_now)
+    tool_calls: list[LLMToolCall] = Field(default_factory=list)
+    tool_call_id: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

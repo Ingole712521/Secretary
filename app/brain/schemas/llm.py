@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.brain.schemas.conversation import Message
+from app.brain.schemas.tools import LLMToolCall
 
 
 class LLMProviderName(StrEnum):
@@ -66,6 +67,8 @@ class LLMRequest(BaseModel):
         temperature: Sampling temperature.
         max_tokens: Maximum tokens to generate.
         stream: Whether to stream the response.
+        tools: OpenAI-compatible tool definitions for function calling.
+        tool_choice: Tool selection mode (``auto``, ``none``, or a function name).
         metadata: Optional request metadata.
     """
 
@@ -74,6 +77,8 @@ class LLMRequest(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int | None = None
     stream: bool = False
+    tools: list[dict[str, Any]] = Field(default_factory=list)
+    tool_choice: str = "auto"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -85,6 +90,7 @@ class LLMResponse(BaseModel):
         model: Model that produced the response.
         finish_reason: Provider-specific completion reason.
         usage: Token usage statistics.
+        tool_calls: Tool invocations requested by the model.
         metadata: Optional response metadata.
     """
 
@@ -92,4 +98,5 @@ class LLMResponse(BaseModel):
     model: ModelInfo
     finish_reason: str | None = None
     usage: dict[str, int] = Field(default_factory=dict)
+    tool_calls: list[LLMToolCall] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)

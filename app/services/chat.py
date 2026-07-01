@@ -9,13 +9,17 @@ from app.brain.schemas.conversation import Message, MessageRole
 from app.brain.schemas.llm import LLMProviderName, LLMRequest
 from app.constants import LOGGER_CHAT
 from app.exceptions import ConfigurationException
-from app.models.chat import ChatRequest, ChatResponse
+from app.models.chat import ChatRequest, ChatResponse, ToolInvocationSummary
 from app.services.base import BaseService
+from app.tools.exceptions import ToolConfirmationRequiredError
+from app.tools.llm_format import registry_to_openai_tools
 
 if TYPE_CHECKING:
     from app.brain.conversation_manager import ConversationManager
     from app.brain.model_router import ModelRouter
     from app.config.settings import Settings
+    from app.services.tool_loop import ToolLoopService
+    from app.tools.registry.registry import ToolRegistry
 
 
 logger = logging.getLogger(LOGGER_CHAT)
@@ -25,11 +29,14 @@ class ChatService(BaseService):
     """Orchestrates multi-turn chat through the LLM provider layer.
 
     Persists user and assistant messages in a conversation session so
-    Jarvis remembers context across turns.
+    Jarvis remembers context across turns. When tools are enabled, runs
+    an agentic tool loop before returning the final assistant reply.
 
     Attributes:
         _model_router: Model selection and provider resolution.
         _conversation_manager: Conversation session tracking.
+        _tool_registry: Registered tools for function calling.
+        _tool_loop: Tool execution loop service.
     """
 
     def __init__(
@@ -37,6 +44,8 @@ class ChatService(BaseService):
         settings: Settings,
         model_router: ModelRouter,
         conversation_manager: ConversationManager,
+        tool_registry: ToolRegistry,
+        tool_loop: ToolLoopService,
     ) -> None:
         """Initialize the chat service.
 
@@ -44,10 +53,14 @@ class ChatService(BaseService):
             settings: Application configuration.
             model_router: Model router with registered provider adapters.
             conversation_manager: Conversation lifecycle manager.
+            tool_registry: Tool registry for function definitions.
+            tool_loop: Tool-calling loop executor.
         """
         super().__init__(settings)
         self._model_router = model_router
         self._conversation_manager = conversation_manager
+        self._tool_registry = tool_registry
+        self._tool_loop = tool_loop
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         """Send a user message and return an assistant reply.
@@ -96,22 +109,56 @@ class ChatService(BaseService):
             system_prompt=request.system_prompt,
         )
 
-        llm_request = LLMRequest(
-            model=model_info,
-            messages=messages,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
+        use_tools = (
+            request.enable_tools
+            and self._settings.tools_enabled
+            and self._tool_registry.count() > 0
         )
+        tools = registry_to_openai_tools(self._tool_registry) if use_tools else []
 
         logger.info(
-            "Chat request | conversation=%s provider=%s model=%s turns=%d",
+            "Chat request | conversation=%s provider=%s model=%s turns=%d tools=%d",
             conversation.id,
             provider_name.value,
             model_id,
             len(messages),
+            len(tools),
         )
 
-        llm_response = await provider.complete(llm_request)
+        tool_summaries: list[ToolInvocationSummary] = []
+        try:
+            if use_tools:
+                llm_response, tool_summaries = (
+                    await self._tool_loop.complete_with_tools(
+                        provider,
+                        model_info,
+                        messages,
+                        tools,
+                        temperature=request.temperature,
+                        max_tokens=request.max_tokens,
+                        confirmed=request.confirm,
+                    )
+                )
+            else:
+                llm_request = LLMRequest(
+                    model=model_info,
+                    messages=messages,
+                    temperature=request.temperature,
+                    max_tokens=request.max_tokens,
+                )
+                llm_response = await provider.complete(llm_request)
+        except ToolConfirmationRequiredError as exc:
+            return ChatResponse(
+                message=(
+                    "This action requires confirmation. "
+                    "Resend your message with confirm=true to proceed."
+                ),
+                conversation_id=conversation.id,
+                model=model_id,
+                provider=provider_name.value,
+                confirmation_required=True,
+                pending_tool_id=exc.tool_id,
+            )
 
         await self._conversation_manager.add_assistant_message(
             conversation.id,
@@ -119,10 +166,11 @@ class ChatService(BaseService):
         )
 
         logger.info(
-            "Chat response | conversation=%s model=%s finish_reason=%s",
+            "Chat response | conversation=%s model=%s finish_reason=%s tools=%d",
             conversation.id,
             llm_response.model.model_id,
             llm_response.finish_reason,
+            len(tool_summaries),
         )
 
         return ChatResponse(
@@ -132,6 +180,7 @@ class ChatService(BaseService):
             provider=provider_name.value,
             finish_reason=llm_response.finish_reason,
             usage=llm_response.usage,
+            tools_used=tool_summaries,
         )
 
     async def _build_llm_messages(

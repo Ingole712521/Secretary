@@ -85,6 +85,22 @@ class ConversationManager:
         message = Message(role=MessageRole.ASSISTANT, content=content)
         return await self._store.add_message(conversation_id, message)
 
+    async def add_message(
+        self,
+        conversation_id: str,
+        message: Message,
+    ) -> Conversation:
+        """Append any message to a conversation.
+
+        Args:
+            conversation_id: Target conversation ID.
+            message: Message to append.
+
+        Returns:
+            Updated conversation.
+        """
+        return await self._store.add_message(conversation_id, message)
+
     async def get_history(self, conversation_id: str) -> list[Message]:
         """Return message history for a conversation.
 

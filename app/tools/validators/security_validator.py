@@ -41,6 +41,11 @@ class SecurityPolicyValidator:
         """
         self._security.check_tool_allowed(tool_id)
         self._security.check_dangerous_parameters(tool_id, parameters)
+        self._security.check_confirmation_required(
+            tool_id,
+            parameters,
+            confirmed=confirmed,
+        )
         self._security.requires_confirmation(
             tool_id,
             permissions,

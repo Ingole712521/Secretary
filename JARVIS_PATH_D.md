@@ -44,12 +44,12 @@
 
 ### Deliverables
 
-- [ ] OpenRouter tool/function calling support in `LLMRequest` / `LLMResponse`
-- [ ] `TerminalTool` — execute shell commands (Windows PowerShell primary)
-- [ ] `ToolAwareChatService` or extend `ChatService` with tool loop
-- [ ] Register terminal tool at startup
-- [ ] Confirmation policy for destructive commands
-- [ ] `POST /api/v1/chat` returns tool execution metadata when tools run
+- [x] OpenRouter tool/function calling support in `LLMRequest` / `LLMResponse`
+- [x] `TerminalTool` — execute shell commands (Windows PowerShell primary)
+- [x] `ToolLoopService` extends chat with tool loop
+- [x] Register terminal tool at startup
+- [x] Confirmation policy for destructive commands
+- [x] `POST /api/v1/chat` returns tool execution metadata when tools run
 
 ### Acceptance
 

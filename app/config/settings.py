@@ -112,10 +112,14 @@ class Settings(BaseSettings):
         default=(
             "You are Jarvis, a personal AI assistant for the user's computer. "
             "Be helpful, concise, and proactive. You remember the current "
-            "conversation. When you cannot do something yet, say so clearly."
+            "conversation. When you cannot do something yet, say so clearly. "
+            "Use the terminal tool to inspect or change the system when needed."
         ),
         alias="JARVIS_SYSTEM_PROMPT",
     )
+    tools_enabled: bool = Field(default=True, alias="TOOLS_ENABLED")
+    terminal_command_timeout: int = Field(default=30, alias="TERMINAL_COMMAND_TIMEOUT")
+    chat_max_tool_iterations: int = Field(default=5, alias="CHAT_MAX_TOOL_ITERATIONS")
     anthropic_api_key: SecretStr | None = Field(
         default=None,
         alias="ANTHROPIC_API_KEY",

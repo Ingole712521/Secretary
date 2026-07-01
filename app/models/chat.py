@@ -5,6 +5,26 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class ToolInvocationSummary(BaseModel):
+    """Summary of a tool executed during a chat turn.
+
+    Attributes:
+        tool_id: Executed tool identifier.
+        status: Tool result status string.
+        output: Structured tool output.
+        error: Error message when execution failed.
+        duration_ms: Execution duration in milliseconds.
+        message: Human-readable tool result summary.
+    """
+
+    tool_id: str
+    status: str
+    output: dict[str, object] = Field(default_factory=dict)
+    error: str | None = None
+    duration_ms: float = 0.0
+    message: str = ""
+
+
 class ChatRequest(BaseModel):
     """Request payload for the chat completion endpoint.
 
@@ -51,6 +71,14 @@ class ChatRequest(BaseModel):
         le=128_000,
         description="Maximum tokens to generate",
     )
+    enable_tools: bool = Field(
+        default=True,
+        description="Allow the model to invoke registered tools",
+    )
+    confirm: bool = Field(
+        default=False,
+        description="Confirm dangerous tool execution",
+    )
 
 
 class ChatResponse(BaseModel):
@@ -78,4 +106,16 @@ class ChatResponse(BaseModel):
     usage: dict[str, int] = Field(
         default_factory=dict,
         description="Token usage statistics",
+    )
+    tools_used: list[ToolInvocationSummary] = Field(
+        default_factory=list,
+        description="Tools executed during this chat turn",
+    )
+    confirmation_required: bool = Field(
+        default=False,
+        description="True when a tool needs confirm=true before running",
+    )
+    pending_tool_id: str | None = Field(
+        default=None,
+        description="Tool awaiting confirmation when confirmation_required",
     )

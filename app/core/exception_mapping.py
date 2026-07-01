@@ -14,7 +14,11 @@ from app.exceptions import (
     ToolException,
     ValidationException,
 )
-from app.tools.exceptions import ToolPermissionDeniedError, ToolValidationError
+from app.tools.exceptions import (
+    ToolConfirmationRequiredError,
+    ToolPermissionDeniedError,
+    ToolValidationError,
+)
 
 _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ValidationException, 422),
@@ -22,6 +26,7 @@ _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ToolPermissionDeniedError, 403),
     (AuthenticationException, 401),
     (ConversationNotFoundError, 404),
+    (ToolConfirmationRequiredError, 428),
     (LLMCompletionError, 502),
     (LLMProviderError, 502),
     (ConfigurationException, 500),

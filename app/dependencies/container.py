@@ -9,6 +9,7 @@ from app.brain.factory import BrainContainer, build_brain
 from app.services.chat import ChatService
 from app.services.conversation import ConversationService
 from app.services.health import HealthService
+from app.services.tool_loop import ToolLoopService
 from app.tools.factory import ToolPlatformContainer, build_tool_platform
 
 if TYPE_CHECKING:
@@ -46,6 +47,12 @@ def build_container(settings: Settings) -> ServiceContainer:
         Populated service container.
     """
     brain = build_brain(settings)
+    tools = build_tool_platform(settings=settings)
+    tool_loop = ToolLoopService(
+        tools.registry,
+        tools.executor,
+        max_iterations=settings.chat_max_tool_iterations,
+    )
     return ServiceContainer(
         settings=settings,
         health_service=HealthService(settings),
@@ -53,8 +60,10 @@ def build_container(settings: Settings) -> ServiceContainer:
             settings,
             brain.model_router,
             brain.conversation_manager,
+            tools.registry,
+            tool_loop,
         ),
         conversation_service=ConversationService(brain.conversation_manager),
         brain=brain,
-        tools=build_tool_platform(),
+        tools=tools,
     )

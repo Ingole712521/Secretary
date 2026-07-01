@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 import httpx
 
 from app.brain.exceptions import LLMCompletionError, LLMProviderError
-from app.brain.schemas.conversation import Message
+from app.brain.schemas.conversation import Message, MessageRole
 from app.brain.schemas.llm import (
     LLMProviderName,
     LLMRequest,
@@ -16,6 +17,7 @@ from app.brain.schemas.llm import (
     ModelCapability,
     ModelInfo,
 )
+from app.brain.schemas.tools import LLMToolCall
 from app.config.settings import Settings
 from app.constants import LOGGER_LLM
 from app.exceptions import ConfigurationException
@@ -235,12 +237,37 @@ class OpenRouterProvider:
         }
         if request.max_tokens is not None:
             body["max_tokens"] = request.max_tokens
+        if request.tools:
+            body["tools"] = request.tools
+            body["tool_choice"] = request.tool_choice
         return body
 
-    @staticmethod
-    def _message_to_api_dict(message: Message) -> dict[str, str]:
+    def _message_to_api_dict(self, message: Message) -> dict[str, Any]:
         """Convert a conversation message to the OpenAI message format."""
-        return {"role": message.role.value, "content": message.content}
+        payload: dict[str, Any] = {"role": message.role.value}
+
+        if message.role == MessageRole.TOOL:
+            payload["tool_call_id"] = message.tool_call_id
+            payload["content"] = message.content
+            return payload
+
+        if message.tool_calls:
+            payload["content"] = message.content or None
+            payload["tool_calls"] = [
+                {
+                    "id": tool_call.id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_call.name,
+                        "arguments": json.dumps(tool_call.arguments),
+                    },
+                }
+                for tool_call in message.tool_calls
+            ]
+            return payload
+
+        payload["content"] = message.content
+        return payload
 
     def _parse_completion_response(
         self,
@@ -254,15 +281,17 @@ class OpenRouterProvider:
 
         first_choice = choices[0]
         message = first_choice.get("message", {})
-        content = message.get("content", "")
+        content = message.get("content") or ""
         finish_reason = first_choice.get("finish_reason")
         usage = payload.get("usage", {})
         model_id = payload.get("model", requested_model.model_id)
+        tool_calls = self._parse_tool_calls(message.get("tool_calls", []))
 
         logger.info(
-            "OpenRouter completion success | model=%s finish_reason=%s",
+            "OpenRouter completion success | model=%s finish_reason=%s tools=%d",
             model_id,
             finish_reason,
+            len(tool_calls),
         )
 
         return LLMResponse(
@@ -279,8 +308,37 @@ class OpenRouterProvider:
                 for key, value in usage.items()
                 if isinstance(value, int)
             },
+            tool_calls=tool_calls,
             metadata={"provider_response_id": payload.get("id")},
         )
+
+    @staticmethod
+    def _parse_tool_calls(raw_calls: list[dict[str, Any]]) -> list[LLMToolCall]:
+        """Parse provider tool call payloads."""
+        parsed: list[LLMToolCall] = []
+        for entry in raw_calls:
+            function = entry.get("function", {})
+            name = function.get("name")
+            if not name:
+                continue
+            arguments_raw = function.get("arguments", "{}")
+            if isinstance(arguments_raw, str):
+                try:
+                    arguments = json.loads(arguments_raw)
+                except json.JSONDecodeError:
+                    arguments = {"raw": arguments_raw}
+            elif isinstance(arguments_raw, dict):
+                arguments = arguments_raw
+            else:
+                arguments = {}
+            parsed.append(
+                LLMToolCall(
+                    id=str(entry.get("id", "")),
+                    name=str(name),
+                    arguments=arguments,
+                )
+            )
+        return parsed
 
     @staticmethod
     def _extract_error_detail(response: httpx.Response) -> str:
