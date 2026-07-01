@@ -30,6 +30,8 @@ def test_settings(tmp_path: Any) -> Settings:
         log_dir=tmp_path / "logs",
         data_dir=tmp_path / "data",
         api_secret_key="test-secret-key",  # noqa: S106
+        voice_stt_provider="stub",
+        voice_tts_provider="stub",
     )
 
 

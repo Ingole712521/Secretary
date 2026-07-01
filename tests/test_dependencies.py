@@ -51,3 +51,11 @@ def test_service_container_includes_memory_service(client: TestClient) -> None:
     """Service container includes MemoryService after Sprint 7."""
     memory_service = client.app.state.container.memory_service
     assert memory_service is not None
+
+
+def test_service_container_includes_voice_service(client: TestClient) -> None:
+    """Service container includes VoiceService after Sprint 8."""
+    voice_service = client.app.state.container.voice_service
+    assert voice_service is not None
+    assert voice_service.stt_provider_name == "stub"
+    assert voice_service.tts_provider_name == "stub"

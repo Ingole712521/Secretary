@@ -21,3 +21,6 @@ httpx>=0.28.0,<1.0.0
 # Desktop automation (Windows primary — Sprint 6+)
 pyautogui>=0.9.54,<1.0.0
 pygetwindow>=0.0.9,<1.0.0
+
+# Voice (Sprint 8+)
+edge-tts>=6.1.0,<7.0.0

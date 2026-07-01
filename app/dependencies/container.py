@@ -12,7 +12,9 @@ from app.services.conversation import ConversationService
 from app.services.health import HealthService
 from app.services.memory import MemoryService
 from app.services.tool_loop import ToolLoopService
+from app.services.voice import VoiceService
 from app.tools.factory import ToolPlatformContainer, build_tool_platform
+from app.voice.factory import build_speech_to_text, build_text_to_speech
 
 if TYPE_CHECKING:
     from app.config.settings import Settings
@@ -29,6 +31,7 @@ class ServiceContainer:
         chat_service: Chat completion service.
         conversation_service: Conversation session service.
         memory_service: Long-term memory service.
+        voice_service: Voice interaction service.
         brain: AI Core subsystem container (Sprint 2+).
         tools: Tool platform container (Sprint 3+).
         memory_store: Long-term memory persistence adapter.
@@ -39,6 +42,7 @@ class ServiceContainer:
     chat_service: ChatService
     conversation_service: ConversationService
     memory_service: MemoryService
+    voice_service: VoiceService
     brain: BrainContainer
     tools: ToolPlatformContainer
     memory_store: MemoryStore
@@ -62,19 +66,27 @@ def build_container(settings: Settings) -> ServiceContainer:
         tools.executor,
         max_iterations=settings.chat_max_tool_iterations,
     )
+    chat_service = ChatService(
+        settings,
+        brain.model_router,
+        brain.conversation_manager,
+        tools.registry,
+        tool_loop,
+        memory_service,
+    )
+    voice_service = VoiceService(
+        settings,
+        chat_service,
+        build_speech_to_text(settings),
+        build_text_to_speech(settings),
+    )
     return ServiceContainer(
         settings=settings,
         health_service=HealthService(settings),
-        chat_service=ChatService(
-            settings,
-            brain.model_router,
-            brain.conversation_manager,
-            tools.registry,
-            tool_loop,
-            memory_service,
-        ),
+        chat_service=chat_service,
         conversation_service=ConversationService(brain.conversation_manager),
         memory_service=memory_service,
+        voice_service=voice_service,
         brain=brain,
         tools=tools,
         memory_store=memory_store,

@@ -130,6 +130,16 @@ class Settings(BaseSettings):
     memory_db_path: Path | None = Field(default=None, alias="MEMORY_DB_PATH")
     memory_search_limit: int = Field(default=10, alias="MEMORY_SEARCH_LIMIT")
     memory_context_limit: int = Field(default=5, alias="MEMORY_CONTEXT_LIMIT")
+    voice_enabled: bool = Field(default=True, alias="VOICE_ENABLED")
+    voice_stt_provider: str = Field(default="openai", alias="VOICE_STT_PROVIDER")
+    voice_tts_provider: str = Field(default="edge", alias="VOICE_TTS_PROVIDER")
+    openai_whisper_model: str = Field(default="whisper-1", alias="OPENAI_WHISPER_MODEL")
+    openai_tts_model: str = Field(default="tts-1", alias="OPENAI_TTS_MODEL")
+    openai_tts_voice: str = Field(default="alloy", alias="OPENAI_TTS_VOICE")
+    edge_tts_voice: str = Field(
+        default="en-US-GuyNeural",
+        alias="EDGE_TTS_VOICE",
+    )
     anthropic_api_key: SecretStr | None = Field(
         default=None,
         alias="ANTHROPIC_API_KEY",
@@ -228,6 +238,22 @@ class Settings(BaseSettings):
     def has_llm_credentials(self) -> bool:
         """Return True when credentials exist for the configured LLM provider."""
         return self.get_active_llm_api_key() is not None
+
+    def get_voice_stt_api_key(self) -> SecretStr | None:
+        """Return an OpenAI API key suitable for Whisper STT.
+
+        OpenRouter keys (``sk-or-``) are not valid for the Whisper endpoint.
+        A direct OpenAI key in ``OPENAI_API_KEY`` is required.
+
+        Returns:
+            OpenAI API key, or None if not configured.
+        """
+        if self.openai_api_key is None:
+            return None
+        key_value = self.openai_api_key.get_secret_value()
+        if key_value.startswith("sk-or-"):
+            return None
+        return self.openai_api_key
 
     def get_active_llm_api_key(self) -> SecretStr | None:
         """Return the API key for the currently configured LLM provider.

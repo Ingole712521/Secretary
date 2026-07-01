@@ -20,6 +20,11 @@ from app.tools.exceptions import (
     ToolPermissionDeniedError,
     ToolValidationError,
 )
+from app.voice.exceptions import (
+    SpeechToTextError,
+    TextToSpeechError,
+    VoiceNotAvailableError,
+)
 
 _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ValidationException, 422),
@@ -28,6 +33,9 @@ _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (AuthenticationException, 401),
     (ConversationNotFoundError, 404),
     (MemoryNotFoundError, 404),
+    (VoiceNotAvailableError, 503),
+    (SpeechToTextError, 502),
+    (TextToSpeechError, 502),
     (ToolConfirmationRequiredError, 428),
     (LLMCompletionError, 502),
     (LLMProviderError, 502),

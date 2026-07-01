@@ -97,16 +97,16 @@
 
 ### Deliverables
 
-- [ ] `SpeechToText` / `TextToSpeech` ports
-- [ ] Whisper or OpenRouter audio STT adapter
-- [ ] TTS adapter (OpenAI TTS or local)
-- [ ] `WebSocket /api/v1/voice` — streaming audio session
-- [ ] Voice session linked to `conversation_id`
+- [x] `SpeechToText` / `TextToSpeech` ports
+- [x] Whisper STT adapter (OpenAI; OpenRouter keys not supported for Whisper)
+- [x] TTS adapters (Edge TTS default, OpenAI TTS optional)
+- [x] `WebSocket /api/v1/voice/ws` — streaming audio session
+- [x] Voice session linked to `conversation_id`
 
 ### Acceptance
 
-- Speak → transcript → Jarvis reply → audio playback
-- Falls back to text chat when voice unavailable
+- [x] Speak → transcript → Jarvis reply → audio playback
+- [x] Falls back to text chat when voice unavailable
 
 ---
 

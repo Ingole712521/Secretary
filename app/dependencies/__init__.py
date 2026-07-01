@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends
+from starlette.requests import HTTPConnection
 
 from app.config.settings import Settings
 from app.dependencies.container import ServiceContainer
@@ -12,34 +13,35 @@ from app.services.chat import ChatService
 from app.services.conversation import ConversationService
 from app.services.health import HealthService
 from app.services.memory import MemoryService
+from app.services.voice import VoiceService
 
 
-def get_app_settings(request: Request) -> Settings:
+def get_app_settings(conn: HTTPConnection) -> Settings:
     """Return settings bound to the running application instance.
 
     Reads from ``app.state`` so test overrides and per-app configuration
     are respected instead of the global ``get_settings()`` cache.
 
     Args:
-        request: Current HTTP request.
+        conn: Current HTTP or WebSocket connection.
 
     Returns:
         Application settings for the active app instance.
     """
-    settings: Settings = request.app.state.settings
+    settings: Settings = conn.app.state.settings
     return settings
 
 
-def get_service_container(request: Request) -> ServiceContainer:
-    """Return the application service container from request state.
+def get_service_container(conn: HTTPConnection) -> ServiceContainer:
+    """Return the application service container from connection state.
 
     Args:
-        request: Current HTTP request.
+        conn: Current HTTP or WebSocket connection.
 
     Returns:
         Service container with registered services.
     """
-    container: ServiceContainer = request.app.state.container
+    container: ServiceContainer = conn.app.state.container
     return container
 
 
@@ -99,6 +101,20 @@ def get_memory_service(
     return container.memory_service
 
 
+def get_voice_service(
+    container: Annotated[ServiceContainer, Depends(get_service_container)],
+) -> VoiceService:
+    """Provide the voice service from the container.
+
+    Args:
+        container: Application service container.
+
+    Returns:
+        Voice service instance.
+    """
+    return container.voice_service
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
@@ -107,4 +123,5 @@ ConversationServiceDep = Annotated[
     Depends(get_conversation_service),
 ]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
+VoiceServiceDep = Annotated[VoiceService, Depends(get_voice_service)]
 ContainerDep = Annotated[ServiceContainer, Depends(get_service_container)]

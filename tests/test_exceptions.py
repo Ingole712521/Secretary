@@ -11,6 +11,11 @@ from app.exceptions import (
     JarvisError,
     ValidationException,
 )
+from app.voice.exceptions import (
+    SpeechToTextError,
+    TextToSpeechError,
+    VoiceNotAvailableError,
+)
 
 
 def test_resolve_status_code_for_validation_exception() -> None:
@@ -46,3 +51,18 @@ def test_jarvis_error_returns_standard_envelope(client: TestClient) -> None:
 def test_configuration_exception_maps_to_500() -> None:
     """ConfigurationException maps to HTTP 500."""
     assert resolve_status_code(ConfigurationException("bad config")) == 500
+
+
+def test_voice_not_available_maps_to_503() -> None:
+    """VoiceNotAvailableError maps to HTTP 503."""
+    assert resolve_status_code(VoiceNotAvailableError("disabled")) == 503
+
+
+def test_speech_to_text_error_maps_to_502() -> None:
+    """SpeechToTextError maps to HTTP 502."""
+    assert resolve_status_code(SpeechToTextError("failed")) == 502
+
+
+def test_text_to_speech_error_maps_to_502() -> None:
+    """TextToSpeechError maps to HTTP 502."""
+    assert resolve_status_code(TextToSpeechError("failed")) == 502
