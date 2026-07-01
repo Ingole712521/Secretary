@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     )
     terminal_command_timeout: int = Field(default=30, alias="TERMINAL_COMMAND_TIMEOUT")
     chat_max_tool_iterations: int = Field(default=5, alias="CHAT_MAX_TOOL_ITERATIONS")
+    memory_enabled: bool = Field(default=True, alias="MEMORY_ENABLED")
+    memory_db_path: Path | None = Field(default=None, alias="MEMORY_DB_PATH")
+    memory_search_limit: int = Field(default=10, alias="MEMORY_SEARCH_LIMIT")
+    memory_context_limit: int = Field(default=5, alias="MEMORY_CONTEXT_LIMIT")
     anthropic_api_key: SecretStr | None = Field(
         default=None,
         alias="ANTHROPIC_API_KEY",
@@ -164,6 +168,14 @@ class Settings(BaseSettings):
     @classmethod
     def parse_path(cls, value: str | Path) -> Path:
         """Coerce string paths to ``Path`` objects."""
+        return Path(value) if isinstance(value, str) else value
+
+    @field_validator("memory_db_path", mode="before")
+    @classmethod
+    def parse_optional_path(cls, value: str | Path | None) -> Path | None:
+        """Coerce optional memory DB path strings to ``Path`` objects."""
+        if value is None or value == "":
+            return None
         return Path(value) if isinstance(value, str) else value
 
     @field_validator("log_level", mode="before")

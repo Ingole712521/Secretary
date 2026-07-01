@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from app.brain.conversation_manager import ConversationManager
     from app.brain.model_router import ModelRouter
     from app.config.settings import Settings
+    from app.services.memory import MemoryService
     from app.services.tool_loop import ToolLoopService
     from app.tools.registry.registry import ToolRegistry
 
@@ -37,6 +38,7 @@ class ChatService(BaseService):
         _conversation_manager: Conversation session tracking.
         _tool_registry: Registered tools for function calling.
         _tool_loop: Tool execution loop service.
+        _memory_service: Long-term memory service.
     """
 
     def __init__(
@@ -46,6 +48,7 @@ class ChatService(BaseService):
         conversation_manager: ConversationManager,
         tool_registry: ToolRegistry,
         tool_loop: ToolLoopService,
+        memory_service: MemoryService,
     ) -> None:
         """Initialize the chat service.
 
@@ -55,12 +58,14 @@ class ChatService(BaseService):
             conversation_manager: Conversation lifecycle manager.
             tool_registry: Tool registry for function definitions.
             tool_loop: Tool-calling loop executor.
+            memory_service: Long-term memory service.
         """
         super().__init__(settings)
         self._model_router = model_router
         self._conversation_manager = conversation_manager
         self._tool_registry = tool_registry
         self._tool_loop = tool_loop
+        self._memory_service = memory_service
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         """Send a user message and return an assistant reply.
@@ -107,6 +112,7 @@ class ChatService(BaseService):
         messages = await self._build_llm_messages(
             conversation_id=conversation.id,
             system_prompt=request.system_prompt,
+            user_message=request.message,
         )
 
         use_tools = (
@@ -188,12 +194,14 @@ class ChatService(BaseService):
         *,
         conversation_id: str,
         system_prompt: str | None,
+        user_message: str,
     ) -> list[Message]:
         """Build the message list sent to the LLM provider.
 
         Args:
             conversation_id: Active conversation identifier.
             system_prompt: Optional per-request system instruction override.
+            user_message: Current user message for memory retrieval.
 
         Returns:
             Messages in provider order: system (if any), then session history.
@@ -205,6 +213,19 @@ class ChatService(BaseService):
         if effective_system:
             messages.append(
                 Message(role=MessageRole.SYSTEM, content=effective_system),
+            )
+
+        relevant_facts = await self._memory_service.relevant_facts_for_message(
+            user_message,
+        )
+        if relevant_facts:
+            messages.append(
+                Message(
+                    role=MessageRole.SYSTEM,
+                    content=self._memory_service.format_facts_for_prompt(
+                        relevant_facts,
+                    ),
+                ),
             )
 
         messages.extend(history)

@@ -84,10 +84,10 @@
 
 ### Deliverables
 
-- [ ] `MemoryStore` port + file/SQLite adapter
-- [ ] Store and retrieve facts ("My name is Nehal")
-- [ ] Inject relevant memories into chat context
-- [ ] `POST /api/v1/memory`, `GET /api/v1/memory/search`
+- [x] `MemoryStore` port + file/SQLite adapter
+- [x] Store and retrieve facts ("My name is Nehal")
+- [x] Inject relevant memories into chat context
+- [x] `POST /api/v1/memory`, `GET /api/v1/memory/search`
 
 ---
 

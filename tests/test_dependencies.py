@@ -45,3 +45,9 @@ def test_service_container_includes_chat_service(client: TestClient) -> None:
     """Service container includes ChatService for AI interactions."""
     chat_service = client.app.state.container.chat_service
     assert chat_service is not None
+
+
+def test_service_container_includes_memory_service(client: TestClient) -> None:
+    """Service container includes MemoryService after Sprint 7."""
+    memory_service = client.app.state.container.memory_service
+    assert memory_service is not None

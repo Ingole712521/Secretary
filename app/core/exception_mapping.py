@@ -14,6 +14,7 @@ from app.exceptions import (
     ToolException,
     ValidationException,
 )
+from app.memory.exceptions import MemoryNotFoundError
 from app.tools.exceptions import (
     ToolConfirmationRequiredError,
     ToolPermissionDeniedError,
@@ -26,6 +27,7 @@ _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ToolPermissionDeniedError, 403),
     (AuthenticationException, 401),
     (ConversationNotFoundError, 404),
+    (MemoryNotFoundError, 404),
     (ToolConfirmationRequiredError, 428),
     (LLMCompletionError, 502),
     (LLMProviderError, 502),

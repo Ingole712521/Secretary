@@ -11,6 +11,7 @@ from app.dependencies.container import ServiceContainer
 from app.services.chat import ChatService
 from app.services.conversation import ConversationService
 from app.services.health import HealthService
+from app.services.memory import MemoryService
 
 
 def get_app_settings(request: Request) -> Settings:
@@ -84,6 +85,20 @@ def get_conversation_service(
     return container.conversation_service
 
 
+def get_memory_service(
+    container: Annotated[ServiceContainer, Depends(get_service_container)],
+) -> MemoryService:
+    """Provide the memory service from the container.
+
+    Args:
+        container: Application service container.
+
+    Returns:
+        Memory service instance.
+    """
+    return container.memory_service
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
@@ -91,4 +106,5 @@ ConversationServiceDep = Annotated[
     ConversationService,
     Depends(get_conversation_service),
 ]
+MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 ContainerDep = Annotated[ServiceContainer, Depends(get_service_container)]
