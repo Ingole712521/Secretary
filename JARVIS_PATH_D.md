@@ -65,10 +65,10 @@
 
 ### Deliverables
 
-- [ ] `DesktopAutomation` port + Windows adapter
-- [ ] Tools: `focus_window`, `click`, `type_text`, `screenshot_region`
-- [ ] Register desktop tools in tool platform
-- [ ] Wire into chat tool loop
+- [x] `DesktopAutomation` port + Windows adapter
+- [x] Tools: `focus_window`, `click`, `type_text`, `screenshot_region`
+- [x] Register desktop tools in tool platform
+- [x] Wire into chat tool loop
 
 ### Acceptance
 
