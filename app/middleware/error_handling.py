@@ -10,32 +10,20 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.exceptions import (
-    AuthenticationException,
-    ConfigurationException,
-    JarvisError,
-    ToolException,
-    ValidationException,
-)
+from app.constants import CORRELATION_ID_STATE_KEY, LOGGER_ERRORS
+from app.core.exception_mapping import resolve_status_code
+from app.exceptions import JarvisError
 from app.models.common import ErrorDetail, ErrorResponse
 
 if TYPE_CHECKING:
     from app.config.settings import Settings
 
-logger = logging.getLogger("jarvis.errors")
-
-_STATUS_MAP: dict[type[JarvisError], int] = {
-    ValidationException: 422,
-    ConfigurationException: 500,
-    ToolException: 500,
-    AuthenticationException: 401,
-    JarvisError: 500,
-}
+logger = logging.getLogger(LOGGER_ERRORS)
 
 
 def _correlation_id(request: Request) -> str | None:
     """Extract correlation ID from request state."""
-    return getattr(request.state, "correlation_id", None)
+    return getattr(request.state, CORRELATION_ID_STATE_KEY, None)
 
 
 def _error_response(
@@ -80,7 +68,7 @@ def register_exception_handlers(app: FastAPI, _settings: Settings) -> None:
         exc: JarvisError,
     ) -> JSONResponse:
         """Handle application-specific exceptions."""
-        status_code = _STATUS_MAP.get(type(exc), 500)
+        status_code = resolve_status_code(exc)
         logger.error(
             "application error: %s",
             exc.message,

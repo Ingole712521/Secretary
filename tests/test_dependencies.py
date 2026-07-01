@@ -1,0 +1,24 @@
+"""Dependency injection tests."""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from app.config.settings import Environment, Settings
+
+
+def test_app_state_settings_match_test_fixture(
+    client: TestClient,
+    test_settings: Settings,
+) -> None:
+    """create_app stores the provided settings on app.state."""
+    app_settings: Settings = client.app.state.settings
+    assert app_settings.app_env == Environment.TESTING
+    assert app_settings.app_env == test_settings.app_env
+
+
+def test_service_container_uses_same_settings(client: TestClient) -> None:
+    """Service container receives settings from app.state."""
+    container_settings = client.app.state.container.settings
+    app_settings = client.app.state.settings
+    assert container_settings is app_settings

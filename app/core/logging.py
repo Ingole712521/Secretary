@@ -7,6 +7,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from typing import TYPE_CHECKING
 
+from app.constants import LOGGER_REQUEST
 from app.utils.file import ensure_directory
 from app.utils.json import dumps
 
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from app.config.settings import Settings
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+
+_VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 
 
 class JsonFormatter(logging.Formatter):
@@ -54,9 +57,13 @@ def setup_logging(settings: Settings) -> None:
     Args:
         settings: Application settings controlling log level and format.
     """
+    log_level = settings.log_level.upper()
+    if log_level not in _VALID_LOG_LEVELS:
+        log_level = "INFO"
+
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
-    root_logger.setLevel(settings.log_level.upper())
+    root_logger.setLevel(log_level)
 
     formatter: logging.Formatter
     if settings.use_json_logs:
@@ -85,4 +92,4 @@ def setup_logging(settings: Settings) -> None:
 
 def get_request_logger() -> logging.Logger:
     """Return the logger used for HTTP request logging."""
-    return logging.getLogger("jarvis.request")
+    return logging.getLogger(LOGGER_REQUEST)

@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.constants import CORRELATION_ID_STATE_KEY
 from app.core.logging import get_request_logger
 
 
@@ -32,7 +33,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
-        correlation_id = getattr(request.state, "correlation_id", None)
+        correlation_id = getattr(request.state, CORRELATION_ID_STATE_KEY, None)
         logger = get_request_logger()
         logger.info(
             "request completed",

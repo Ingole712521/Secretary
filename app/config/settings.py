@@ -87,6 +87,12 @@ class Settings(BaseSettings):
         """Coerce string paths to ``Path`` objects."""
         return Path(value) if isinstance(value, str) else value
 
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def normalize_log_level(cls, value: str) -> str:
+        """Normalize log level to uppercase."""
+        return value.upper() if isinstance(value, str) else value
+
     @model_validator(mode="after")
     def validate_environment_rules(self) -> Self:
         """Apply environment-specific validation rules."""
@@ -97,6 +103,12 @@ class Settings(BaseSettings):
             if self.api_secret_key.get_secret_value() == "change-me-in-production":
                 msg = "API_SECRET_KEY must be set in production"
                 raise ValueError(msg)
+        if (
+            self.app_env == Environment.STAGING
+            and self.api_secret_key.get_secret_value() == "change-me-in-production"
+        ):
+            msg = "API_SECRET_KEY must be set in staging"
+            raise ValueError(msg)
         if self.app_env == Environment.TESTING:
             self.log_json = False
         return self
@@ -126,3 +138,11 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return cached application settings singleton."""
     return Settings()
+
+
+def clear_settings_cache() -> None:
+    """Clear the cached settings singleton.
+
+    Used in tests and when reloading configuration at runtime.
+    """
+    get_settings.cache_clear()

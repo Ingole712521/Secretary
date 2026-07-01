@@ -6,9 +6,25 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from app.config.settings import Settings, get_settings
+from app.config.settings import Settings
 from app.dependencies.container import ServiceContainer
 from app.services.health import HealthService
+
+
+def get_app_settings(request: Request) -> Settings:
+    """Return settings bound to the running application instance.
+
+    Reads from ``app.state`` so test overrides and per-app configuration
+    are respected instead of the global ``get_settings()`` cache.
+
+    Args:
+        request: Current HTTP request.
+
+    Returns:
+        Application settings for the active app instance.
+    """
+    settings: Settings = request.app.state.settings
+    return settings
 
 
 def get_service_container(request: Request) -> ServiceContainer:
@@ -38,6 +54,6 @@ def get_health_service(
     return container.health_service
 
 
-SettingsDep = Annotated[Settings, Depends(get_settings)]
+SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ContainerDep = Annotated[ServiceContainer, Depends(get_service_container)]

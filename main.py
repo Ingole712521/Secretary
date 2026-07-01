@@ -11,12 +11,13 @@ import logging
 import uvicorn
 
 from app.config.settings import get_settings
+from app.constants import LOGGER_MAIN
 from app.core.app import create_app
 
 settings = get_settings()
 app = create_app(settings)
 
-logger = logging.getLogger("jarvis.main")
+logger = logging.getLogger(LOGGER_MAIN)
 
 
 def main() -> None:

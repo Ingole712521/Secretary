@@ -8,16 +8,16 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config.settings import Environment, Settings, get_settings
+from app.config.settings import Environment, Settings, clear_settings_cache
 from app.core.app import create_app
 
 
 @pytest.fixture(autouse=True)
 def _clear_settings_cache() -> Generator[None, None, None]:
     """Clear settings cache before and after each test."""
-    get_settings.cache_clear()
+    clear_settings_cache()
     yield
-    get_settings.cache_clear()
+    clear_settings_cache()
 
 
 @pytest.fixture

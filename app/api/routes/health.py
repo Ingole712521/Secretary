@@ -16,7 +16,7 @@ router = APIRouter(tags=["Health"])
     summary="Root endpoint",
     description="Returns application metadata and documentation link.",
 )
-async def root(health_service: HealthServiceDep) -> RootResponse:
+def root(health_service: HealthServiceDep) -> RootResponse:
     """Return welcome payload with application metadata."""
     return health_service.get_root()
 
@@ -27,7 +27,7 @@ async def root(health_service: HealthServiceDep) -> RootResponse:
     summary="Health check",
     description="Returns service health status for load balancers and monitors.",
 )
-async def health(health_service: HealthServiceDep) -> HealthResponse:
+def health(health_service: HealthServiceDep) -> HealthResponse:
     """Return application health status."""
     return health_service.get_health()
 
@@ -38,6 +38,6 @@ async def health(health_service: HealthServiceDep) -> HealthResponse:
     summary="Version information",
     description="Returns application name, version, and environment.",
 )
-async def version(health_service: HealthServiceDep) -> VersionResponse:
+def version(health_service: HealthServiceDep) -> VersionResponse:
     """Return application version information."""
     return health_service.get_version()
