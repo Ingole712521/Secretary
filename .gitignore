@@ -98,7 +98,8 @@ desktop.ini
 # Logs & Runtime
 # -----------------------------------------------------------------------------
 *.log
-logs/
+logs/*
+!logs/.gitkeep
 tmp/
 temp/
 *.pid
@@ -111,7 +112,8 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
-data/
+data/*
+!data/.gitkeep
 storage/
 
 # -----------------------------------------------------------------------------
