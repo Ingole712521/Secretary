@@ -28,3 +28,12 @@ def test_service_container_includes_brain(client: TestClient) -> None:
     """Service container includes Brain subsystem after Sprint 2."""
     assert client.app.state.container.brain is not None
     assert client.app.state.container.brain.orchestrator is not None
+
+
+def test_service_container_includes_tool_platform(client: TestClient) -> None:
+    """Service container includes Tool platform after Sprint 3."""
+    tools = client.app.state.container.tools
+    assert tools is not None
+    assert tools.registry is not None
+    assert tools.executor is not None
+    assert tools.registry.count() == 0

@@ -9,9 +9,12 @@ from app.exceptions import (
     ToolException,
     ValidationException,
 )
+from app.tools.exceptions import ToolPermissionDeniedError, ToolValidationError
 
 _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ValidationException, 422),
+    (ToolValidationError, 422),
+    (ToolPermissionDeniedError, 403),
     (AuthenticationException, 401),
     (ConfigurationException, 500),
     (ToolException, 500),

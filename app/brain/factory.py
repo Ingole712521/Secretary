@@ -11,6 +11,7 @@ from app.brain.model_router import ModelRouter
 from app.brain.orchestrator import Orchestrator
 from app.brain.planner import BrainPlanner
 from app.brain.prompt_manager import PromptManager
+from app.brain.schemas.llm import LLMProviderName
 from app.brain.stores.context_provider import StubContextProvider
 from app.brain.stores.conversation_store import InMemoryConversationStore
 from app.brain.stores.prompt_provider import InMemoryPromptProvider
@@ -59,7 +60,9 @@ def build_brain(settings: Settings) -> BrainContainer:
     conversation_manager = ConversationManager(conversation_store)
     prompt_manager = PromptManager(prompt_provider)
     context_manager = ContextManager(context_provider, prompt_manager)
-    model_router = ModelRouter()
+    model_router = ModelRouter(
+        default_provider=LLMProviderName(settings.llm_provider.value),
+    )
     planner = BrainPlanner()
 
     orchestrator = Orchestrator(
