@@ -13,6 +13,45 @@ from app.tools.results.models import ToolResult
 from app.tools.schemas.enums import ToolCategory, ToolPermissionLevel
 from app.tools.schemas.parameters import ToolParameter
 
+# Friendly names the user is likely to say -> actual Windows launch target.
+_WINDOWS_APP_ALIASES = {
+    "paint": "mspaint",
+    "ms paint": "mspaint",
+    "calculator": "calc",
+    "calc": "calc",
+    "command prompt": "cmd",
+    "command line": "cmd",
+    "terminal": "wt",
+    "windows terminal": "wt",
+    "powershell": "powershell",
+    "file explorer": "explorer",
+    "explorer": "explorer",
+    "files": "explorer",
+    "task manager": "taskmgr",
+    "control panel": "control",
+    "settings": "ms-settings:",
+    "notepad": "notepad",
+    "wordpad": "write",
+    "word": "winword",
+    "ms word": "winword",
+    "excel": "excel",
+    "ms excel": "excel",
+    "powerpoint": "powerpnt",
+    "outlook": "outlook",
+    "vscode": "code",
+    "vs code": "code",
+    "visual studio code": "code",
+    "code editor": "code",
+    "edge": "msedge",
+    "microsoft edge": "msedge",
+    "google chrome": "chrome",
+    "snipping tool": "snippingtool",
+    "camera": "microsoft.windows.camera:",
+    "photos": "ms-photos:",
+    "store": "ms-windows-store:",
+    "microsoft store": "ms-windows-store:",
+}
+
 
 class OpenAppTool(BaseTool):
     """Open (launch) an application, file, folder, or URL by name.
@@ -96,8 +135,10 @@ class OpenAppTool(BaseTool):
                 message="Tell me what to open (an app, file, folder, or URL).",
             )
 
+        launch_target = _resolve_alias(target)
+
         try:
-            exit_code, stderr = await asyncio.to_thread(self._launch, target)
+            exit_code, stderr = await asyncio.to_thread(self._launch, launch_target)
         except subprocess.TimeoutExpired:
             # A launch that does not return quickly usually means the app
             # started and is running in the foreground.
@@ -136,6 +177,25 @@ class OpenAppTool(BaseTool):
         )
         stderr = completed.stderr.decode(sys.getdefaultencoding(), errors="replace")
         return completed.returncode, stderr
+
+
+def _resolve_alias(target: str) -> str:
+    """Map a friendly app name to its real launch target on Windows.
+
+    URLs, paths, and unknown names are returned unchanged.
+
+    Args:
+        target: The user-provided app name, path, or URL.
+
+    Returns:
+        The executable/target to launch.
+    """
+    if platform.system() != "Windows":
+        return target
+    if "/" in target or "\\" in target or ":" in target or "." in target:
+        # Looks like a path or URL; do not remap.
+        return target
+    return _WINDOWS_APP_ALIASES.get(target.lower(), target)
 
 
 def _launch_argv(target: str) -> list[str]:
