@@ -15,6 +15,7 @@ from app.voice.schemas.models import VoiceTurnResult
 if TYPE_CHECKING:
     from app.config.settings import Settings
     from app.services.chat import ChatService
+    from app.voice.conversation.controller import ConversationController
     from app.voice.interfaces.speech_to_text import SpeechToText
     from app.voice.interfaces.text_to_speech import TextToSpeech
 
@@ -37,19 +38,15 @@ class VoiceService:
         chat_service: ChatService,
         stt: SpeechToText,
         tts: TextToSpeech,
+        *,
+        conversation: ConversationController | None = None,
     ) -> None:
-        """Initialize the voice service.
-
-        Args:
-            settings: Application settings.
-            chat_service: Chat service for assistant replies.
-            stt: Speech-to-text adapter.
-            tts: Text-to-speech adapter.
-        """
+        """Initialize the voice service."""
         self._settings = settings
         self._chat_service = chat_service
         self._stt = stt
         self._tts = tts
+        self._conversation = conversation
 
     @property
     def stt_provider_name(self) -> str:
@@ -102,6 +99,23 @@ class VoiceService:
             transcription.provider,
             len(transcription.text),
         )
+
+        if self._conversation is not None:
+            if conversation_id is not None:
+                self._conversation.set_conversation_id(conversation_id)
+            turn = await self._conversation.handle_transcript(
+                transcription.text,
+                enable_tools=enable_tools,
+                confirm=confirm,
+            )
+            encoded = base64.b64encode(turn.synthesis.audio).decode("ascii")
+            return VoiceTurnResult(
+                transcript=turn.transcript,
+                response_text=turn.response_text,
+                conversation_id=turn.conversation_id,
+                response_audio_base64=encoded,
+                audio_format=turn.synthesis.format,
+            )
 
         try:
             chat_response = await self._chat_service.chat(

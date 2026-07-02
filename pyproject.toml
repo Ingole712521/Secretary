@@ -13,6 +13,11 @@ dependencies = [
     "pyautogui>=0.9.54,<1.0.0",
     "pygetwindow>=0.0.9,<1.0.0",
     "edge-tts>=6.1.0,<7.0.0",
+    "faster-whisper>=1.1.0,<2.0.0",
+    "piper-tts>=1.2.0,<2.0.0",
+    "sounddevice>=0.5.0,<1.0.0",
+    "numpy>=2.0.0,<3.0.0",
+    "openwakeword>=0.6.0,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -48,7 +53,25 @@ module = "tests.*"
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ["pyautogui", "pygetwindow", "pygetwindow.*", "edge_tts", "edge_tts.*"]
+module = [
+    "pyautogui",
+    "pygetwindow",
+    "pygetwindow.*",
+    "edge_tts",
+    "edge_tts.*",
+    "faster_whisper",
+    "faster_whisper.*",
+    "piper",
+    "piper.*",
+    "sounddevice",
+    "sounddevice.*",
+    "openwakeword",
+    "openwakeword.*",
+    "torch",
+    "torch.*",
+    "numpy",
+    "numpy.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

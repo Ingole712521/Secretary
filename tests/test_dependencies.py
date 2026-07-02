@@ -59,3 +59,11 @@ def test_service_container_includes_voice_service(client: TestClient) -> None:
     assert voice_service is not None
     assert voice_service.stt_provider_name == "stub"
     assert voice_service.tts_provider_name == "stub"
+
+
+def test_service_container_includes_voice_platform(client: TestClient) -> None:
+    """Service container includes voice platform components."""
+    container = client.app.state.container
+    assert container.voice_platform is not None
+    assert container.voice_platform_service is not None
+    assert container.voice_platform.manager is not None

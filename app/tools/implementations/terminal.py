@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import platform
+import subprocess
 import sys
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -101,7 +102,11 @@ class TerminalTool(BaseTool):
         """
         command = str(params["command"])
         cwd = params.get("cwd")
-        cwd_str = str(cwd) if cwd is not None else None
+        # Models routinely send optional string params as "" (empty string)
+        # rather than omitting them. An empty/blank cwd is not a real working
+        # directory and would crash the subprocess (e.g. WinError 123), so
+        # treat it as "not provided".
+        cwd_str = str(cwd).strip() or None if cwd is not None else None
 
         try:
             exit_code, stdout, stderr = await self._run_command(
@@ -156,12 +161,31 @@ class TerminalTool(BaseTool):
         return "powershell" if platform.system() == "Windows" else "sh"
 
 
+def _command_argv(command: str) -> list[str]:
+    """Build the shell argument vector for the current platform."""
+    if platform.system() == "Windows":
+        return [
+            "powershell",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            command,
+        ]
+    return ["sh", "-c", command]
+
+
 async def _default_command_runner(
     command: str,
     cwd: str | None,
     timeout_seconds: float,
 ) -> tuple[int, str, str]:
-    """Execute a command using asyncio subprocess.
+    """Execute a command in a worker thread.
+
+    A synchronous ``subprocess.run`` is used inside ``asyncio.to_thread``
+    instead of ``asyncio.create_subprocess_exec``. On Windows, uvicorn runs
+    on a ``SelectorEventLoop``, which does not support asyncio subprocesses
+    and raises an empty ``NotImplementedError``. Running in a thread makes
+    command execution work regardless of the active event loop policy.
 
     Args:
         command: Shell command string.
@@ -175,37 +199,22 @@ async def _default_command_runner(
         TimeoutError: When the command exceeds the timeout.
         OSError: When the process cannot be started.
     """
-    if platform.system() == "Windows":
-        process = await asyncio.create_subprocess_exec(
-            "powershell",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=cwd,
-        )
-    else:
-        process = await asyncio.create_subprocess_exec(
-            "sh",
-            "-c",
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=cwd,
-        )
+    argv = _command_argv(command)
+    encoding = sys.getdefaultencoding()
 
-    try:
-        stdout_bytes, stderr_bytes = await asyncio.wait_for(
-            process.communicate(),
-            timeout=timeout_seconds,
-        )
-    except TimeoutError:
-        process.kill()
-        await process.wait()
-        raise
+    def _run() -> tuple[int, str, str]:
+        try:
+            completed = subprocess.run(  # noqa: S603
+                argv,
+                capture_output=True,
+                cwd=cwd,
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(str(exc)) from exc
+        stdout = completed.stdout.decode(encoding, errors="replace")
+        stderr = completed.stderr.decode(encoding, errors="replace")
+        return completed.returncode, stdout, stderr
 
-    stdout = stdout_bytes.decode(sys.getdefaultencoding(), errors="replace")
-    stderr = stderr_bytes.decode(sys.getdefaultencoding(), errors="replace")
-    return process.returncode or 0, stdout, stderr
+    return await asyncio.to_thread(_run)

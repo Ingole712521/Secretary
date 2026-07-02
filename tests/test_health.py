@@ -25,11 +25,9 @@ def test_version_returns_application_metadata(client: TestClient) -> None:
     assert payload["environment"] == "testing"
 
 
-def test_root_returns_welcome_payload(client: TestClient) -> None:
-    """GET / returns application welcome metadata."""
+def test_root_serves_web_ui(client: TestClient) -> None:
+    """GET / serves the Jarvis web UI (HTML)."""
     response = client.get("/")
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["name"] == "Jarvis OS"
-    assert payload["docs"] == "/docs"
-    assert payload["environment"] == "testing"
+    assert "text/html" in response.headers["content-type"]
+    assert "<html" in response.text.lower()

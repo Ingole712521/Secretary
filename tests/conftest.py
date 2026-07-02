@@ -32,6 +32,10 @@ def test_settings(tmp_path: Any) -> Settings:
         api_secret_key="test-secret-key",  # noqa: S106
         voice_stt_provider="stub",
         voice_tts_provider="stub",
+        voice_vad_provider="stub",
+        voice_wakeword_provider="stub",
+        voice_microphone_provider="stub",
+        voice_audio_output_provider="stub",
     )
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.voice.schemas.models import SynthesisResult
+from app.voice.schemas.models import SynthesisOptions, SynthesisResult
 
 
 class TextToSpeech(Protocol):
@@ -19,13 +19,11 @@ class TextToSpeech(Protocol):
         """Return True when the provider is configured and reachable."""
         ...
 
-    async def synthesize(self, text: str) -> SynthesisResult:
-        """Synthesize speech audio from text.
-
-        Args:
-            text: Text to speak.
-
-        Returns:
-            Synthesis result with audio bytes.
-        """
+    async def synthesize(
+        self,
+        text: str,
+        *,
+        options: SynthesisOptions | None = None,
+    ) -> SynthesisResult:
+        """Synthesize speech audio from text."""
         ...

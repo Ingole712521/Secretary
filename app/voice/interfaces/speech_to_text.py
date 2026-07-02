@@ -23,17 +23,9 @@ class SpeechToText(Protocol):
         self,
         audio: bytes,
         *,
-        audio_format: str = "webm",
+        audio_format: str = "wav",
         language: str | None = None,
+        sample_rate: int | None = None,
     ) -> TranscriptionResult:
-        """Transcribe audio bytes to text.
-
-        Args:
-            audio: Raw audio data.
-            audio_format: Audio format hint (webm, wav, mp3).
-            language: Optional language code.
-
-        Returns:
-            Transcription result with text.
-        """
+        """Transcribe audio bytes to text."""
         ...

@@ -33,6 +33,19 @@ class ParameterValidator:
         validated: dict[str, Any] = dict(parameters)
         schema_by_name = {p.name: p for p in schema}
 
+        # LLMs frequently emit optional string parameters as "" instead of
+        # omitting them. Treat a blank optional string as "not provided" so
+        # schema defaults apply and tools do not receive invalid empty values.
+        for name in list(validated):
+            param = schema_by_name.get(name)
+            if (
+                param is not None
+                and not param.required
+                and isinstance(validated[name], str)
+                and validated[name].strip() == ""
+            ):
+                del validated[name]
+
         for param in schema:
             if param.required and param.name not in validated:
                 msg = f"Missing required parameter: {param.name}"

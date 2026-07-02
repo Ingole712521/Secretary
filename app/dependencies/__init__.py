@@ -14,6 +14,7 @@ from app.services.conversation import ConversationService
 from app.services.health import HealthService
 from app.services.memory import MemoryService
 from app.services.voice import VoiceService
+from app.services.voice_platform import VoicePlatformService
 
 
 def get_app_settings(conn: HTTPConnection) -> Settings:
@@ -115,6 +116,13 @@ def get_voice_service(
     return container.voice_service
 
 
+def get_voice_platform_service(
+    container: Annotated[ServiceContainer, Depends(get_service_container)],
+) -> VoicePlatformService:
+    """Provide the voice platform service from the container."""
+    return container.voice_platform_service
+
+
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
@@ -124,4 +132,8 @@ ConversationServiceDep = Annotated[
 ]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 VoiceServiceDep = Annotated[VoiceService, Depends(get_voice_service)]
+VoicePlatformServiceDep = Annotated[
+    VoicePlatformService,
+    Depends(get_voice_platform_service),
+]
 ContainerDep = Annotated[ServiceContainer, Depends(get_service_container)]

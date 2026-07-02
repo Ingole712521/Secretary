@@ -110,12 +110,27 @@ class Settings(BaseSettings):
     )
     jarvis_system_prompt: str = Field(
         default=(
-            "You are Jarvis, a personal AI assistant for the user's computer. "
-            "Be helpful, concise, and proactive. You remember the current "
-            "conversation. When you cannot do something yet, say so clearly. "
-            "Use the terminal tool to inspect or change the system when needed. "
-            "Use desktop tools (focus_window, type_text, click, screenshot_region) "
-            "to interact with applications on screen."
+            "You are Jarvis, a personal AI assistant that CONTROLS the user's "
+            "Windows computer through tools. Be helpful, concise, and "
+            "proactive, and remember the current conversation.\n"
+            "CRITICAL RULES:\n"
+            "1. You CAN take real actions on this machine. NEVER refuse a "
+            "request by claiming you lack the ability. If a task can be done "
+            "with a shell command, DO IT with the terminal tool. Only report "
+            "that something failed AFTER a tool has actually returned an "
+            "error.\n"
+            "2. When the user says 'open', 'launch', 'start', or 'run' an "
+            "application, program, file, website, or folder, immediately call "
+            "the terminal tool with PowerShell 'Start-Process <target>'. "
+            "Examples: 'Start-Process cursor', 'Start-Process notepad', "
+            "'Start-Process chrome', 'Start-Process https://google.com'.\n"
+            "3. 'cursor' ALWAYS refers to the Cursor code editor application "
+            "on this PC. 'open my cursor' / 'open cursor' means run "
+            "'Start-Process cursor' in the terminal. It does NOT mean the "
+            "mouse pointer. Never refuse a 'cursor' request.\n"
+            "4. Use desktop tools (focus_window, type_text, click, "
+            "screenshot_region) to interact with applications already on "
+            "screen."
         ),
         alias="JARVIS_SYSTEM_PROMPT",
     )
@@ -131,8 +146,60 @@ class Settings(BaseSettings):
     memory_search_limit: int = Field(default=10, alias="MEMORY_SEARCH_LIMIT")
     memory_context_limit: int = Field(default=5, alias="MEMORY_CONTEXT_LIMIT")
     voice_enabled: bool = Field(default=True, alias="VOICE_ENABLED")
-    voice_stt_provider: str = Field(default="openai", alias="VOICE_STT_PROVIDER")
-    voice_tts_provider: str = Field(default="edge", alias="VOICE_TTS_PROVIDER")
+    voice_stt_provider: str = Field(
+        default="faster_whisper",
+        alias="VOICE_STT_PROVIDER",
+    )
+    voice_tts_provider: str = Field(default="piper", alias="VOICE_TTS_PROVIDER")
+    voice_vad_provider: str = Field(default="manual", alias="VOICE_VAD_PROVIDER")
+    voice_wakeword_provider: str = Field(
+        default="stub",
+        alias="VOICE_WAKEWORD_PROVIDER",
+    )
+    voice_microphone_provider: str = Field(
+        default="stub",
+        alias="VOICE_MICROPHONE_PROVIDER",
+    )
+    voice_audio_output_provider: str = Field(
+        default="stub",
+        alias="VOICE_AUDIO_OUTPUT_PROVIDER",
+    )
+    voice_wake_word: str = Field(default="hey jarvis", alias="VOICE_WAKE_WORD")
+    voice_language: str = Field(default="en", alias="VOICE_LANGUAGE")
+    voice_sample_rate: int = Field(default=16000, alias="VOICE_SAMPLE_RATE")
+    voice_silence_timeout_ms: int = Field(
+        default=800,
+        alias="VOICE_SILENCE_TIMEOUT_MS",
+    )
+    voice_microphone_device: str | None = Field(
+        default=None,
+        alias="VOICE_MICROPHONE_DEVICE",
+    )
+    voice_speaker_device: str | None = Field(
+        default=None,
+        alias="VOICE_SPEAKER_DEVICE",
+    )
+    voice_whisper_model: str = Field(default="base", alias="VOICE_WHISPER_MODEL")
+    voice_whisper_device: str = Field(default="cpu", alias="VOICE_WHISPER_DEVICE")
+    voice_whisper_compute_type: str = Field(
+        default="int8",
+        alias="VOICE_WHISPER_COMPUTE_TYPE",
+    )
+    voice_piper_voice: str = Field(
+        default="data/voices/en_US-lessac-medium.onnx",
+        alias="VOICE_PIPER_VOICE",
+    )
+    voice_piper_speed: float = Field(default=1.0, alias="VOICE_PIPER_SPEED")
+    voice_piper_pitch: float = Field(default=1.0, alias="VOICE_PIPER_PITCH")
+    voice_piper_volume: float = Field(default=1.0, alias="VOICE_PIPER_VOLUME")
+    voice_openwakeword_model: str = Field(
+        default="hey_jarvis",
+        alias="VOICE_OPENWAKEWORD_MODEL",
+    )
+    voice_wake_word_threshold: float = Field(
+        default=0.5,
+        alias="VOICE_WAKE_WORD_THRESHOLD",
+    )
     openai_whisper_model: str = Field(default="whisper-1", alias="OPENAI_WHISPER_MODEL")
     openai_tts_model: str = Field(default="tts-1", alias="OPENAI_TTS_MODEL")
     openai_tts_voice: str = Field(default="alloy", alias="OPENAI_TTS_VOICE")

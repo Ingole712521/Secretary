@@ -23,6 +23,7 @@ from app.tools.exceptions import (
 from app.voice.exceptions import (
     SpeechToTextError,
     TextToSpeechError,
+    VoiceLifecycleError,
     VoiceNotAvailableError,
 )
 
@@ -34,6 +35,7 @@ _STATUS_RESOLUTION_ORDER: list[tuple[type[JarvisError], int]] = [
     (ConversationNotFoundError, 404),
     (MemoryNotFoundError, 404),
     (VoiceNotAvailableError, 503),
+    (VoiceLifecycleError, 409),
     (SpeechToTextError, 502),
     (TextToSpeechError, 502),
     (ToolConfirmationRequiredError, 428),

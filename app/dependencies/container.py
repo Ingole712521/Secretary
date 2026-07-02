@@ -13,8 +13,9 @@ from app.services.health import HealthService
 from app.services.memory import MemoryService
 from app.services.tool_loop import ToolLoopService
 from app.services.voice import VoiceService
+from app.services.voice_platform import VoicePlatformService
 from app.tools.factory import ToolPlatformContainer, build_tool_platform
-from app.voice.factory import build_speech_to_text, build_text_to_speech
+from app.voice.factory import VoicePlatformContainer, build_voice_platform
 
 if TYPE_CHECKING:
     from app.config.settings import Settings
@@ -31,7 +32,9 @@ class ServiceContainer:
         chat_service: Chat completion service.
         conversation_service: Conversation session service.
         memory_service: Long-term memory service.
-        voice_service: Voice interaction service.
+        voice_service: WebSocket voice turn service.
+        voice_platform_service: Local voice platform lifecycle service.
+        voice_platform: Voice platform component container.
         brain: AI Core subsystem container (Sprint 2+).
         tools: Tool platform container (Sprint 3+).
         memory_store: Long-term memory persistence adapter.
@@ -43,6 +46,8 @@ class ServiceContainer:
     conversation_service: ConversationService
     memory_service: MemoryService
     voice_service: VoiceService
+    voice_platform_service: VoicePlatformService
+    voice_platform: VoicePlatformContainer
     brain: BrainContainer
     tools: ToolPlatformContainer
     memory_store: MemoryStore
@@ -74,12 +79,15 @@ def build_container(settings: Settings) -> ServiceContainer:
         tool_loop,
         memory_service,
     )
+    voice_platform = build_voice_platform(settings, chat_service)
     voice_service = VoiceService(
         settings,
         chat_service,
-        build_speech_to_text(settings),
-        build_text_to_speech(settings),
+        voice_platform.stt,
+        voice_platform.tts,
+        conversation=voice_platform.conversation,
     )
+    voice_platform_service = VoicePlatformService(settings, voice_platform)
     return ServiceContainer(
         settings=settings,
         health_service=HealthService(settings),
@@ -87,6 +95,8 @@ def build_container(settings: Settings) -> ServiceContainer:
         conversation_service=ConversationService(brain.conversation_manager),
         memory_service=memory_service,
         voice_service=voice_service,
+        voice_platform_service=voice_platform_service,
+        voice_platform=voice_platform,
         brain=brain,
         tools=tools,
         memory_store=memory_store,
