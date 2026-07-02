@@ -14,6 +14,7 @@ from app.tools.implementations.desktop_tools import (
     TypeTextTool,
 )
 from app.tools.implementations.terminal import TerminalTool
+from app.tools.implementations.web_tools import WebSearchTool
 
 if TYPE_CHECKING:
     from app.config.settings import Settings
@@ -40,6 +41,7 @@ def register_production_tools(
         TerminalTool(timeout_seconds=float(settings.terminal_command_timeout)),
     )
     registry.register(OpenAppTool())
+    registry.register(WebSearchTool())
     registry.register(
         OpenCursorProjectTool(
             roots=settings.cursor_project_roots,
