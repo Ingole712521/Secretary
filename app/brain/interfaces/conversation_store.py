@@ -14,11 +14,17 @@ class ConversationStore(Protocol):
     will implement this protocol in a future sprint.
     """
 
-    async def create(self, title: str = "New Conversation") -> Conversation:
+    async def create(
+        self,
+        title: str = "New Conversation",
+        *,
+        conversation_id: str | None = None,
+    ) -> Conversation:
         """Create a new conversation.
 
         Args:
             title: Optional conversation title.
+            conversation_id: Optional explicit identifier to assign.
 
         Returns:
             Newly created conversation.

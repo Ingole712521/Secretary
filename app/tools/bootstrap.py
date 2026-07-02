@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from app.tools.desktop.factory import build_desktop_automation
+from app.tools.implementations.cursor_tools import OpenCursorProjectTool
 from app.tools.implementations.desktop_tools import (
     ClickTool,
     FocusWindowTool,
@@ -36,6 +37,12 @@ def register_production_tools(
 
     registry.register(
         TerminalTool(timeout_seconds=float(settings.terminal_command_timeout)),
+    )
+    registry.register(
+        OpenCursorProjectTool(
+            roots=settings.cursor_project_roots,
+            max_depth=settings.cursor_project_search_depth,
+        ),
     )
 
     if not settings.desktop_automation_enabled:

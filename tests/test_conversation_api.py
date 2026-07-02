@@ -104,19 +104,24 @@ def test_multi_turn_chat_reuses_conversation_id(
     assert any("Nehal" in message["content"] for message in captured)
 
 
-def test_unknown_conversation_id_returns_404(
+def test_unknown_conversation_id_is_recreated(
     conversation_client: TestClient,
 ) -> None:
-    """Posting to an unknown conversation_id returns 404."""
+    """Posting to an unknown conversation_id recreates it under the same ID.
+
+    The in-memory store can be reset by a server reload while a client still
+    holds a conversation ID. Chat must recover gracefully instead of failing.
+    """
+    unknown_id = "00000000-0000-0000-0000-000000000000"
     response = conversation_client.post(
         "/api/v1/chat",
         json={
             "message": "Hello",
-            "conversation_id": "00000000-0000-0000-0000-000000000000",
+            "conversation_id": unknown_id,
         },
     )
-    assert response.status_code == 404
-    assert response.json()["error"]["code"] == "CONVERSATION_NOT_FOUND"
+    assert response.status_code == 200
+    assert response.json()["conversation_id"] == unknown_id
 
 
 def test_list_and_get_conversation(conversation_client: TestClient) -> None:

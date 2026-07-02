@@ -48,7 +48,13 @@ class ConversationManager:
             existing = await self._store.get(conversation_id)
             if existing is not None:
                 return existing
-            raise ConversationNotFoundError(conversation_id)
+            # The process-local store may have been reset (e.g. server
+            # reload) while a client still holds the ID. Recreate the
+            # conversation under the same ID instead of failing.
+            return await self._store.create(
+                title=title,
+                conversation_id=conversation_id,
+            )
         return await self._store.create(title=title)
 
     async def add_user_message(

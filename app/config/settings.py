@@ -125,10 +125,16 @@ class Settings(BaseSettings):
             "Examples: 'Start-Process cursor', 'Start-Process notepad', "
             "'Start-Process chrome', 'Start-Process https://google.com'.\n"
             "3. 'cursor' ALWAYS refers to the Cursor code editor application "
-            "on this PC. 'open my cursor' / 'open cursor' means run "
-            "'Start-Process cursor' in the terminal. It does NOT mean the "
-            "mouse pointer. Never refuse a 'cursor' request.\n"
-            "4. Use desktop tools (focus_window, type_text, click, "
+            "on this PC, never the mouse pointer. Never refuse a 'cursor' "
+            "request.\n"
+            "4. To open a PROJECT/repo/codebase in Cursor, ALWAYS use the "
+            "cursor.open_project tool with the project name the user said "
+            "(for example 'open my react native project' -> "
+            "cursor.open_project with project='react native'). This finds the "
+            "project folder and opens it. Do NOT open a blank Cursor window "
+            "with 'Start-Process cursor'. If the user says just 'open cursor' "
+            "with no project, ask which project they want to open.\n"
+            "5. Use desktop tools (focus_window, type_text, click, "
             "screenshot_region) to interact with applications already on "
             "screen."
         ),
@@ -141,6 +147,14 @@ class Settings(BaseSettings):
     )
     terminal_command_timeout: int = Field(default=30, alias="TERMINAL_COMMAND_TIMEOUT")
     chat_max_tool_iterations: int = Field(default=5, alias="CHAT_MAX_TOOL_ITERATIONS")
+    cursor_project_roots: Annotated[list[str], NoDecode] = Field(
+        default_factory=list,
+        alias="CURSOR_PROJECT_ROOTS",
+    )
+    cursor_project_search_depth: int = Field(
+        default=3,
+        alias="CURSOR_PROJECT_SEARCH_DEPTH",
+    )
     memory_enabled: bool = Field(default=True, alias="MEMORY_ENABLED")
     memory_db_path: Path | None = Field(default=None, alias="MEMORY_DB_PATH")
     memory_search_limit: int = Field(default=10, alias="MEMORY_SEARCH_LIMIT")
@@ -239,6 +253,15 @@ class Settings(BaseSettings):
         """Parse comma-separated CORS origins from environment."""
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @field_validator("cursor_project_roots", mode="before")
+    @classmethod
+    def parse_cursor_project_roots(cls, value: str | list[str]) -> list[str]:
+        """Parse comma/semicolon-separated project root directories."""
+        if isinstance(value, str):
+            parts = value.replace(";", ",").split(",")
+            return [part.strip() for part in parts if part.strip()]
         return value
 
     @field_validator("log_dir", "data_dir", mode="before")

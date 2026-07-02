@@ -17,16 +17,28 @@ class InMemoryConversationStore:
         """Initialize an empty in-memory store."""
         self._conversations: dict[str, Conversation] = {}
 
-    async def create(self, title: str = "New Conversation") -> Conversation:
+    async def create(
+        self,
+        title: str = "New Conversation",
+        *,
+        conversation_id: str | None = None,
+    ) -> Conversation:
         """Create a new conversation.
 
         Args:
             title: Optional conversation title.
+            conversation_id: Optional explicit identifier to assign. Used to
+                recreate a conversation whose ID a client still references
+                after the process-local store was reset.
 
         Returns:
             Newly created conversation.
         """
-        conversation = Conversation(title=title)
+        conversation = (
+            Conversation(title=title)
+            if conversation_id is None
+            else Conversation(id=conversation_id, title=title)
+        )
         self._conversations[conversation.id] = conversation
         return conversation
 
