@@ -35,17 +35,34 @@ $s.Dispose()
 """
 
 _LISTEN_SCRIPT = """param([string]$OutPath, [int]$InitialTimeout = 15, `
-    [double]$EndSilence = 0.8)
+    [double]$EndSilence = 1.3, [string]$WavPath = "")
 Add-Type -AssemblyName System.Speech
-$r = New-Object System.Speech.Recognition.SpeechRecognitionEngine
+# Prefer the en-US recognizer for the best accuracy; fall back to default.
+try {
+    $culture = New-Object System.Globalization.CultureInfo("en-US")
+    $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine $culture
+} catch {
+    $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine
+}
 $r.SetInputToDefaultAudioDevice()
 $r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))
 $r.InitialSilenceTimeout = [TimeSpan]::FromSeconds($InitialTimeout)
+# Longer trailing silence so natural mid-sentence pauses do not cut you off.
 $r.EndSilenceTimeout = [TimeSpan]::FromSeconds($EndSilence)
+$r.EndSilenceTimeoutAmbiguous = [TimeSpan]::FromSeconds($EndSilence)
+# Allow long utterances instead of stopping after a few seconds of speech.
+$r.BabbleTimeout = [TimeSpan]::FromSeconds(0)
 $text = ""
 try {
     $res = $r.Recognize()
-    if ($res) { $text = $res.Text }
+    if ($res) {
+        $text = $res.Text
+        # Persist the captured audio so a cloud engine can re-transcribe it.
+        if ($WavPath -and $res.Audio) {
+            $fs = [System.IO.File]::Create($WavPath)
+            try { $res.Audio.WriteToWaveStream($fs) } finally { $fs.Close() }
+        }
+    }
 } catch {}
 [System.IO.File]::WriteAllText($OutPath, $text, `
     (New-Object System.Text.UTF8Encoding($false)))
@@ -121,29 +138,35 @@ class WindowsSpeech:
         self,
         *,
         initial_timeout: int = 15,
-        end_silence: float = 0.8,
+        end_silence: float = 1.3,
+        capture_wav: Path | None = None,
     ) -> str:
         """Listen on the default microphone and return recognized text.
 
         Args:
             initial_timeout: Seconds to wait for speech to begin.
             end_silence: Trailing silence (seconds) that ends a phrase.
+            capture_wav: When set, the raw recorded phrase is written to this
+                WAV path so a higher-accuracy engine can re-transcribe it.
 
         Returns:
             Recognized text, or an empty string when nothing was heard.
         """
         out_file = self._work_dir / f"heard_{uuid.uuid4().hex}.txt"
+        args = [
+            "-OutPath",
+            str(out_file),
+            "-InitialTimeout",
+            str(initial_timeout),
+            "-EndSilence",
+            str(end_silence),
+        ]
+        if capture_wav is not None:
+            args += ["-WavPath", str(capture_wav)]
         try:
             self._run_powershell(
                 self._listen_script,
-                [
-                    "-OutPath",
-                    str(out_file),
-                    "-InitialTimeout",
-                    str(initial_timeout),
-                    "-EndSilence",
-                    str(end_silence),
-                ],
+                args,
                 timeout=float(initial_timeout) + 60.0,
             )
             if out_file.exists():
