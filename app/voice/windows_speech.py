@@ -13,10 +13,22 @@ import tempfile
 import uuid
 from pathlib import Path
 
-_SPEAK_SCRIPT = """param([string]$Path, [int]$Rate = 1)
+_SPEAK_SCRIPT = """param([string]$Path, [int]$Rate = 1, [string]$Voice = "female")
 Add-Type -AssemblyName System.Speech
 $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $s.Rate = $Rate
+try {
+    if ($Voice -eq "female") {
+        $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female)
+    } elseif ($Voice -eq "male") {
+        $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Male)
+    } elseif ($Voice) {
+        $match = $s.GetInstalledVoices() | Where-Object {
+            $_.VoiceInfo.Name -like ("*" + $Voice + "*")
+        } | Select-Object -First 1
+        if ($match) { $s.SelectVoice($match.VoiceInfo.Name) }
+    }
+} catch {}
 $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $Path
 if ($text) { $s.Speak($text) }
 $s.Dispose()
@@ -50,14 +62,18 @@ class WindowsSpeech:
 
     Attributes:
         _rate: Speech rate for synthesis (-10 slow .. 10 fast).
+        _voice: Voice preference ("female", "male", or a name substring).
         _work_dir: Temp directory holding the PowerShell helper scripts.
     """
 
-    def __init__(self, *, rate: int = 1) -> None:
+    def __init__(self, *, rate: int = 1, voice: str = "female") -> None:
         """Initialize and materialize the PowerShell helper scripts.
 
         Args:
             rate: Speech synthesis rate (-10..10).
+            voice: Voice selection: "female", "male", or part of an installed
+                voice name (e.g. "Zira"). Falls back to the default voice
+                when no match is found.
 
         Raises:
             WindowsSpeechError: When not running on Windows.
@@ -66,6 +82,7 @@ class WindowsSpeech:
             msg = "WindowsSpeech requires Windows (System.Speech)."
             raise WindowsSpeechError(msg)
         self._rate = rate
+        self._voice = voice
         self._work_dir = Path(tempfile.gettempdir()) / "jarvis_voice"
         self._work_dir.mkdir(parents=True, exist_ok=True)
         self._speak_script = self._work_dir / "speak.ps1"
@@ -87,7 +104,14 @@ class WindowsSpeech:
         try:
             self._run_powershell(
                 self._speak_script,
-                ["-Path", str(text_file), "-Rate", str(self._rate)],
+                [
+                    "-Path",
+                    str(text_file),
+                    "-Rate",
+                    str(self._rate),
+                    "-Voice",
+                    self._voice,
+                ],
                 timeout=120.0,
             )
         finally:

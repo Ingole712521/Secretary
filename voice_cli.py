@@ -6,8 +6,14 @@ Run this to talk to Jarvis by voice:
 
 Jarvis greets you, then listens on your microphone and acts on what you say
 (opening apps, projects, running commands, answering questions) using the
-same chat + tools pipeline as the web UI. Speech works fully offline through
-the built-in Windows speech engine.
+same chat + tools pipeline as the web UI. Jarvis speaks with a smooth neural
+voice (Edge TTS) and automatically falls back to the offline Windows voice
+when there is no internet connection.
+
+Environment variables:
+    JARVIS_NEURAL_VOICE  Edge neural voice name (default en-US-JennyNeural).
+    JARVIS_VOICE         Offline fallback voice: "female" or "male".
+    JARVIS_USER_NAME     Name Jarvis greets you by (default Nehal).
 
 Say "stop", "exit", "quit", or "goodbye" to end the session.
 """
@@ -20,6 +26,7 @@ import os
 from app.config.settings import get_settings
 from app.dependencies.container import build_container
 from app.models.chat import ChatRequest
+from app.voice.edge_speech import EdgeSpeaker, EdgeSpeechError
 from app.voice.windows_speech import WindowsSpeech, WindowsSpeechError
 
 EXIT_PHRASES = {
@@ -52,10 +59,32 @@ async def run() -> None:
         return
 
     try:
-        speech = WindowsSpeech()
+        speech = WindowsSpeech(voice=os.getenv("JARVIS_VOICE", "female"))
     except WindowsSpeechError as exc:
         print(f"Voice unavailable: {exc}")
         return
+
+    # Prefer a smooth neural voice; fall back to the built-in voice offline.
+    neural: EdgeSpeaker | None = None
+    neural_ok = True
+    try:
+        neural = EdgeSpeaker(
+            voice=os.getenv("JARVIS_NEURAL_VOICE", "en-US-JennyNeural"),
+        )
+    except Exception:  # noqa: BLE001
+        neural = None
+
+    async def say(text: str) -> None:
+        """Speak text with the neural voice, falling back to SAPI."""
+        nonlocal neural_ok
+        if neural is not None and neural_ok:
+            try:
+                await neural.speak(text)
+                return
+            except EdgeSpeechError:
+                # Offline or playback issue: use the offline voice from now on.
+                neural_ok = False
+        speech.speak(text)
 
     container = build_container(settings)
     user_name = os.getenv("JARVIS_USER_NAME", "Nehal")
@@ -63,7 +92,7 @@ async def run() -> None:
 
     greeting = f"Hello {user_name}. How are you? I'm listening."
     print(f"\nJarvis: {greeting}")
-    speech.speak(greeting)
+    await say(greeting)
 
     print("\n(Say 'stop' or 'goodbye' to exit. Press Ctrl+C to quit.)\n")
 
@@ -84,7 +113,7 @@ async def run() -> None:
         if _is_exit(heard):
             farewell = f"Goodbye {user_name}."
             print(f"Jarvis: {farewell}")
-            speech.speak(farewell)
+            await say(farewell)
             break
 
         try:
@@ -102,7 +131,7 @@ async def run() -> None:
             reply = f"Sorry, something went wrong: {exc}"
 
         print(f"Jarvis: {reply}\n")
-        speech.speak(reply)
+        await say(reply)
 
 
 def main() -> None:
