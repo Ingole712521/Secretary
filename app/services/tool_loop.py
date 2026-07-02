@@ -12,8 +12,11 @@ from app.brain.schemas.llm import LLMRequest, LLMResponse, ModelInfo
 from app.brain.schemas.tools import LLMToolCall
 from app.constants import LOGGER_CHAT
 from app.models.chat import ToolInvocationSummary
-from app.tools.exceptions import ToolConfirmationRequiredError
-from app.tools.llm_format import function_name_to_tool_id
+from app.tools.exceptions import ToolConfirmationRequiredError, ToolNotFoundError
+from app.tools.llm_format import (
+    function_name_to_tool_id,
+    tool_id_to_function_name,
+)
 from app.tools.schemas.enums import ToolPermissionLevel
 from app.tools.schemas.requests import ToolExecutionRequest
 
@@ -169,7 +172,33 @@ class ToolLoopService:
         Raises:
             ToolConfirmationRequiredError: When confirmation is required.
         """
-        tool_id = function_name_to_tool_id(tool_call.name, self._registry)
+        try:
+            tool_id = function_name_to_tool_id(tool_call.name, self._registry)
+        except ToolNotFoundError:
+            available = [
+                tool_id_to_function_name(definition.id)
+                for definition in self._registry.list_tools()
+            ]
+            logger.warning(
+                "LLM requested unknown tool | name=%s available=%s",
+                tool_call.name,
+                available,
+            )
+            return ToolInvocationSummary(
+                tool_id=tool_call.name,
+                status="failure",
+                output={
+                    "error": f"Unknown tool '{tool_call.name}'.",
+                    "available_tools": available,
+                    "hint": (
+                        "Use one of the available tools. To run a program or "
+                        "shell command use 'terminal_run'."
+                    ),
+                },
+                error=f"Unknown tool: {tool_call.name}",
+                duration_ms=0.0,
+                message="Requested tool does not exist",
+            )
         request = ToolExecutionRequest(
             tool_id=tool_id,
             parameters=tool_call.arguments,

@@ -166,9 +166,13 @@ class ChatService(BaseService):
                 pending_tool_id=exc.tool_id,
             )
 
+        final_message = llm_response.content
+        if not final_message.strip():
+            final_message = _summarize_tool_activity(tool_summaries)
+
         await self._conversation_manager.add_assistant_message(
             conversation.id,
-            llm_response.content,
+            final_message,
         )
 
         logger.info(
@@ -180,7 +184,7 @@ class ChatService(BaseService):
         )
 
         return ChatResponse(
-            message=llm_response.content,
+            message=final_message,
             conversation_id=conversation.id,
             model=llm_response.model.model_id,
             provider=provider_name.value,
@@ -230,3 +234,33 @@ class ChatService(BaseService):
 
         messages.extend(history)
         return messages
+
+
+def _summarize_tool_activity(summaries: list[ToolInvocationSummary]) -> str:
+    """Build a reply when the model returns tools but no text.
+
+    Some models emit tool calls and then return empty content on the final
+    turn. Rather than showing a blank response, describe what the tools did.
+
+    Args:
+        summaries: Tool invocations from this chat turn.
+
+    Returns:
+        A human-readable status message.
+    """
+    if not summaries:
+        return "Done."
+
+    succeeded = [s for s in summaries if s.status == "success"]
+    failed = [s for s in summaries if s.status not in {"success", "warning"}]
+
+    parts: list[str] = []
+    for summary in succeeded:
+        parts.append(summary.message or f"Ran {summary.tool_id}.")
+    for summary in failed:
+        detail = summary.message or summary.error or "the action failed"
+        parts.append(f"I couldn't complete {summary.tool_id}: {detail}")
+
+    if not parts:
+        return "Done."
+    return " ".join(parts)

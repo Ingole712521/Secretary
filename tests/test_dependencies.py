@@ -36,8 +36,9 @@ def test_service_container_includes_tool_platform(client: TestClient) -> None:
     assert tools is not None
     assert tools.registry is not None
     assert tools.executor is not None
-    assert tools.registry.count() == 6
+    assert tools.registry.count() == 7
     assert tools.registry.find("terminal.run") is not None
+    assert tools.registry.find("desktop.open") is not None
     assert tools.registry.find("cursor.open_project") is not None
     assert tools.registry.find("desktop.focus_window") is not None
 
