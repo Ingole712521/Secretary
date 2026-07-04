@@ -37,6 +37,7 @@ from app.dependencies.container import build_container
 from app.models.chat import ChatRequest
 from app.voice.edge_speech import EdgeSpeaker, EdgeSpeechError
 from app.voice.google_speech import GoogleSpeechError, GoogleSpeechRecognizer
+from app.voice.mic_recorder import MicRecorder, MicRecorderError
 from app.voice.windows_speech import WindowsSpeech, WindowsSpeechError
 
 EXIT_PHRASES = {
@@ -103,34 +104,60 @@ async def run() -> None:
                 neural_ok = False
         speech.speak(text)
 
-    # High-accuracy transcription (Google) on top of the Windows recorder.
+    # Direct microphone recorder with voice-activity detection. This captures
+    # clean audio independent of the (weak) Windows recognizer endpointing.
+    recorder: MicRecorder | None = None
+    try:
+        recorder = MicRecorder()
+    except MicRecorderError:
+        recorder = None
+
+    # High-accuracy transcription (Google), with an offline Windows fallback.
     google_stt: GoogleSpeechRecognizer | None = None
     google_ok = True
     try:
         google_stt = GoogleSpeechRecognizer(
-            language=os.getenv("JARVIS_STT_LANGUAGE", "en-US"),
+            language=os.getenv("JARVIS_STT_LANGUAGE", "en-IN"),
         )
     except Exception:  # noqa: BLE001
         google_stt = None
 
     def hear() -> str:
-        """Capture one phrase, transcribing with Google when possible."""
+        """Record one phrase and transcribe it as accurately as possible."""
         nonlocal google_ok
-        wav = _tmp_wav() if google_stt is not None and google_ok else None
-        sapi_text = speech.listen(capture_wav=wav)
-        if wav is None:
-            return sapi_text
+        if recorder is None:
+            return speech.listen()
+
+        wav = _tmp_wav()
         try:
-            if wav.exists() and wav.stat().st_size > 0 and google_stt is not None:
-                accurate = google_stt.transcribe(wav)
-                if accurate:
-                    return accurate
-        except GoogleSpeechError:
-            # Offline or endpoint issue: stick with the offline engine.
-            google_ok = False
+            result = recorder.record(wav)
+            if not result.captured:
+                if 0 < result.max_rms < 55:
+                    print(
+                        "  (mic too quiet - speak closer or raise "
+                        "Windows mic volume)",
+                    )
+                else:
+                    print("  (no speech detected - try speaking louder)")
+                return ""
+
+            text = ""
+            if google_stt is not None and google_ok:
+                try:
+                    text = google_stt.transcribe(wav)
+                except GoogleSpeechError:
+                    google_ok = False
+
+            if not text:
+                text = speech.transcribe_wav(wav)
+
+            if not text:
+                print("  (retrying with live Windows recognizer...)")
+                text = speech.listen(initial_timeout=12, end_silence=1.5)
+
+            return text
         finally:
             wav.unlink(missing_ok=True)
-        return sapi_text
 
     container = build_container(settings)
     user_name = os.getenv("JARVIS_USER_NAME", "Nehal")
@@ -143,10 +170,9 @@ async def run() -> None:
     print("\n(Say 'stop' or 'goodbye' to exit. Press Ctrl+C to quit.)\n")
 
     while True:
-        print("Listening...")
         try:
             heard = hear()
-        except WindowsSpeechError as exc:
+        except (WindowsSpeechError, MicRecorderError) as exc:
             print(f"  (listen error: {exc})")
             continue
 

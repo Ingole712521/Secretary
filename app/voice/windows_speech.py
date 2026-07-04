@@ -70,6 +70,30 @@ $r.Dispose()
 """
 
 
+_TRANSCRIBE_SCRIPT = """param([string]$WavPath, [string]$OutPath)
+Add-Type -AssemblyName System.Speech
+try {
+    $culture = New-Object System.Globalization.CultureInfo("en-US")
+    $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine $culture
+} catch {
+    $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine
+}
+$r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))
+$r.SetInputToWaveFile($WavPath)
+$sb = New-Object System.Text.StringBuilder
+try {
+    while ($true) {
+        $res = $r.Recognize()
+        if (-not $res) { break }
+        [void]$sb.Append($res.Text); [void]$sb.Append(" ")
+    }
+} catch {}
+[System.IO.File]::WriteAllText($OutPath, $sb.ToString().Trim(), `
+    (New-Object System.Text.UTF8Encoding($false)))
+$r.Dispose()
+"""
+
+
 class WindowsSpeechError(RuntimeError):
     """Raised when Windows speech is unavailable or fails."""
 
@@ -104,8 +128,32 @@ class WindowsSpeech:
         self._work_dir.mkdir(parents=True, exist_ok=True)
         self._speak_script = self._work_dir / "speak.ps1"
         self._listen_script = self._work_dir / "listen.ps1"
+        self._transcribe_script = self._work_dir / "transcribe.ps1"
         self._speak_script.write_text(_SPEAK_SCRIPT, encoding="utf-8")
         self._listen_script.write_text(_LISTEN_SCRIPT, encoding="utf-8")
+        self._transcribe_script.write_text(_TRANSCRIBE_SCRIPT, encoding="utf-8")
+
+    def transcribe_wav(self, wav_path: Path) -> str:
+        """Transcribe a recorded WAV file offline with the Windows engine.
+
+        Args:
+            wav_path: Path to a PCM WAV file to transcribe.
+
+        Returns:
+            Recognized text, or an empty string when nothing was recognized.
+        """
+        out_file = self._work_dir / f"tr_{uuid.uuid4().hex}.txt"
+        try:
+            self._run_powershell(
+                self._transcribe_script,
+                ["-WavPath", str(wav_path), "-OutPath", str(out_file)],
+                timeout=120.0,
+            )
+            if out_file.exists():
+                return out_file.read_text(encoding="utf-8").strip()
+            return ""
+        finally:
+            out_file.unlink(missing_ok=True)
 
     def speak(self, text: str) -> None:
         """Speak text aloud synchronously.
