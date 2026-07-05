@@ -1,8 +1,7 @@
 # Jarvis OS — Engineering Rules
 
 > **Authority:** These rules are mandatory for all human and AI contributors.  
-> **Violations block merge.** No exceptions without architect approval.
-
+> **Violations block merge.** 
 ---
 
 ## 1. Non-Negotiables
